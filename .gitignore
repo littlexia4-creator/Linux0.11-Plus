@@ -1,0 +1,17 @@
+bochsout.txt
+hdc-0.11.img.lock
+.vscode/
+Boot.img
+hdc-0.11.img
+*.o
+*.a
+*.disasm
+tools/system.exe
+tools/system.bin
+tools/build.exe
+system.map
+kernel/traps.s
+kernel/chr_drv/keyboard.s
+kernel/chr_drv/tty_ioctl.s
+boot/bootsect.bin
+boot/setup.bin
