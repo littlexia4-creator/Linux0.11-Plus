@@ -101,31 +101,32 @@ tools/system.exe:	boot/head.o init/main.o \
 #	nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > System.map 
 
 kernel/math/math.a:kernel/math/math_emulate.o
-#	(cd kernel/math ; make)
-	(cd kernel/math & make)
+	(cd kernel/math ; make)
+#	(cd kernel/math & make)
 	
 kernel/blk_drv/blk_drv.a:$(BLK_DRV_SRC)
-#	(cd kernel/blk_drv ; make)
-	(cd kernel/blk_drv & make)
+	(cd kernel/blk_drv ; make)
+#	(cd kernel/blk_drv & make)
 	
 kernel/chr_drv/chr_drv.a:$(CHR_DRV_SRC)
-#	(cd kernel/chr_drv ; make)
-	(cd kernel/chr_drv & make)
+	(cd kernel/chr_drv ; make)
+#	(cd kernel/chr_drv & make)
 	
 kernel/kernel.o:$(KERNEL_SRC)
-#	(cd kernel; make)
-	(cd kernel & make)
+	(cd kernel; make)
+# 	(cd kernel & make)
 
 mm/mm.o:$(MM_SRC)
-#	(cd mm; make)
-	(cd mm & make)
+	(cd mm; make)
+#	(cd mm & make)
 	
 fs/fs.o:$(FS_SRC)
-#	(cd fs; make)
-	(cd fs & make)
+	(cd fs; make)
+#	(cd fs & make)
 	
 lib/lib.a:$(LIB_SRC)
-	(cd lib & make)
+	make -C ./lib
+#	(cd lib & make)
 
 boot/setup.bin: boot/setup.asm 
 	$(AS86) -I"$(INC)" -o boot/setup.bin boot/setup.asm
