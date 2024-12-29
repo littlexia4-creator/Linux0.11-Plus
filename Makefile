@@ -100,7 +100,7 @@ tools/system.exe:	boot/head.o init/main.o \
 	-o tools/system.exe >system.map
 #	nm tools/system | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'| sort > System.map 
 
-kernel/math/math.a:kernel/math/math_emulate.o
+kernel/math/math.a:kernel/math/math_emulate.c
 	(cd kernel/math ; make)
 #	(cd kernel/math & make)
 	
