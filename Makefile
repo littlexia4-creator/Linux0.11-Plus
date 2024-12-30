@@ -32,7 +32,7 @@ ROOT_DEV= #FLOPPY
 BLK_DRV_SRC  = kernel/blk_drv/ll_rw_blk.c kernel/blk_drv/floppy.c \
                 kernel/blk_drv/hd.c kernel/blk_drv/ramdisk.c
 
-CHR_DRV_SRC  = kernel/chr_drv/tty_io.c kernel/chr_drv/console.c kernel/chr_drv/keyboard.s \
+CHR_DRV_SRC  = kernel/chr_drv/tty_io.c kernel/chr_drv/console.c kernel/chr_drv/keyboard1.S \
         kernel/chr_drv/serial.c kernel/chr_drv/rs_io.s \
 	      kernel/chr_drv/tty_ioctl.s
 
