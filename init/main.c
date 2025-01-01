@@ -101,7 +101,12 @@ static long main_memory_start = 0;
 
 struct drive_info { char dummy[32]; } drive_info;
 
-void start(void)		/* This really IS void, no error here. */
+/**
+ * 夏裕强:
+ * 无法在这里定义main函数，原因未知，猜测与MinGW-gcc的处理有关
+ * envp：环境变量的数组，每个元素是一个字符串，格式为 KEY=VALUE
+*/
+void _main(int argc, char *argv[], char *envp[])		/* This really IS void, no error here. */
 {			/* The startup routine assumes (well, ...) this */
 /*
  * Interrupts are still disabled. Do necessary setups, then
