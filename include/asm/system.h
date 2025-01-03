@@ -39,6 +39,20 @@ __asm__ ("movw %%dx,%%ax\n\t" \
 #define set_system_gate(n,addr) \
 	_set_gate(&idt[n],15,3,addr)
 
+#define set_void_call_gate(n,addr) \
+	_set_gate(&gdt[n],12,3,addr)
+
+#define set_call_gate(n,addr,nParam) \
+__asm__ ("movw %%dx,%%ax\n\t" \
+	"movw %0,%%dx\n\t" \
+	"movl %%eax,%1\n\t" \
+	"movl %%edx,%2" \
+	: \
+	: "i" ((short) (0x8000+(3<<13)+(12<<8)+(nParam&0xf))), \
+	"o" (*((char *) (&gdt[n]))), \
+	"o" (*(4+(char *) (&gdt[n]))), \
+	"d" ((char *) (addr)),"a" (0x00080000))
+
 #define _set_seg_desc(gate_addr,type,dpl,base,limit) {\
 	*(gate_addr) = ((base) & 0xff000000) | \
 		(((base) & 0x00ff0000)>>16) | \
