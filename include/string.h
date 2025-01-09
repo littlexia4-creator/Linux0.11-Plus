@@ -333,15 +333,13 @@ __asm__("testl %1,%1\n\t"
 return __res;
 }
 
-static inline void * memcpy(void * dest,const void * src, int n)
-{
-__asm__("cld\n\t"
-	"rep\n\t"
-	"movsb"
-	::"c" (n),"S" (src),"D" (dest)
-	);
-return dest;
-}
+#define memcpy(dest,src,n) ({ \
+void * _res = dest; \
+__asm__ ("cld;rep;movsb" \
+	::"D" ((long)(_res)),"S" ((long)(src)),"c" ((long) (n)) \
+	); \
+_res; \
+})
 
 extern inline void * memmove(void * dest,const void * src, int n)
 {
