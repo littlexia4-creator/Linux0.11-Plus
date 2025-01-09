@@ -142,21 +142,36 @@ tmp.s:	boot/bootsect.s tools/system
 #		| cut -c25-31 | tr '\012' ' '; echo "+ 15 ) / 16") > tmp.s
 	cat boot/bootsect.s >> tmp.s
 
-clean:
-#	rm -f Image System.map tmp_make core boot/bootsect boot/setup
-#	rm -f init/*.o tools/system tools/build boot/*.o
-#	(cd mm;make clean)
-#	(cd fs;make clean)
-#	(cd kernel;make clean)
-#	(cd lib;make clean)
-	@del /S /Q *.a *.o system.map tools\system.exe
-#	del Image System.map tmp_make core boot\bootsect boot\setup
-#	del init\*.o tools\system tools\build boot\*.o
-#	(cd mm & make clean)
-#	(cd fs & make clean)
-#	(cd kernel & make clean)
-#	(cd lib &make clean)
+clean.win_bat:
+	@del /S /Q tools\system.exe *.a *.o system.map 
 
+clean.win_sh:
+	rm bochsout.txt -f
+	rm .\tools\build.exe .\tools\system.exe .\tools\system.bin -f
+	rm system.map Boot.img -f
+	rm init/main.o boot/head.o boot/setup.bin boot/bootsect.bin boot/setup.disasm boot/bootsect.disasm -f
+	make clean -C ./lib 
+	make clean -C ./kernel 
+	make clean -C ./mm 
+	make clean -C ./fs 
+
+clean.win: clean.win_sh
+
+clean.linux:
+	rm -f Image System.map tmp_make core boot/bootsect boot/setup
+	rm -f init/*.o tools/system tools/build boot/*.o
+	(cd mm;make clean)
+	(cd fs;make clean)
+	(cd kernel;make clean)
+	(cd lib;make clean)
+	del Image System.map tmp_make core boot\bootsect boot\setup
+	del init\*.o tools\system tools\build boot\*.o
+	(cd mm & make clean)
+	(cd fs & make clean)
+	(cd kernel & make clean)
+	(cd lib &make clean)
+
+clean: clean.win
 
 backup: clean
 	(cd .. ; tar cf - linux | compress16 - > backup.Z)
