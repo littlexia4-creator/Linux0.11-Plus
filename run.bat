@@ -2,5 +2,5 @@
 
 make
 
-..\bochs-2.3.6\bochs -f bochsrc.bxrc -q
+"E:\Program Files\Bochs-2.8\bochs.exe" -f bochsrc.bxrc -q
 
