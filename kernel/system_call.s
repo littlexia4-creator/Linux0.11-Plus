@@ -14,6 +14,10 @@
  * don't handle signal-recognition, as that would clutter them up totally
  * unnecessarily.
  *
+ * Interrupts preserve the interrupted task's FS selector: user tasks
+ * use 0x17 (also while inside a syscall), kernel threads use 0x10 and
+ * have no user LDT descriptors. Never force 0x17 in an interrupt.
+ *
  * Stack layout in 'ret_from_system_call':
  *
  *	 0(%esp) - %eax
@@ -139,8 +143,6 @@ _coprocessor_error:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	movl $0x17,%eax
-	mov %ax,%fs
 	pushl $ret_from_sys_call
 	jmp _math_error
 
@@ -156,8 +158,6 @@ _device_not_available:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	movl $0x17,%eax
-	mov %ax,%fs
 	pushl $ret_from_sys_call
 	clts				# clear TS so that we can use math
 	movl %cr0,%eax
@@ -184,8 +184,6 @@ _timer_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	movl $0x17,%eax
-	mov %ax,%fs
 	incl _jiffies
 	movb $0x20,%al		# EOI to interrupt controller #1
 	outb %al,$0x20
@@ -228,8 +226,6 @@ _hd_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	movl $0x17,%eax
-	mov %ax,%fs
 	movb $0x20,%al
 	outb %al,$0xA0		# EOI to interrupt controller #1
 	jmp 1f			# give port chance to breathe
@@ -259,8 +255,6 @@ _floppy_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	movl $0x17,%eax
-	mov %ax,%fs
 	movb $0x20,%al
 	outb %al,$0x20		# EOI to interrupt controller #1
 	xorl %eax,%eax
