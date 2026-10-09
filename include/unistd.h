@@ -130,6 +130,7 @@
 #define __NR_setreuid	70
 #define __NR_setregid	71
 #define __NR_clone	72	/* user threads sharing the address space */
+#define __NR_kthread_demo 73 /* run the kernel-thread demo (kthread.c) */
 
 #define _syscall0(type,name) \
 type name(void) \
