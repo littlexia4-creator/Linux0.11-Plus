@@ -1,12 +1,12 @@
 /*
- *  linux/kernel/fork.c
+ *  linux/kernel/task.c  (fork.c in the original 0.11 tree)
  *
  *  (C) 1991  Linus Torvalds
  */
 
 /*
- *  'fork.c' contains the help-routines for the 'fork' system call
- * (see also system_call.s), and some misc functions ('verify_area').
+ *  'task.c' contains the task-creation machinery: copy_process() for
+ * the 'fork' system call, plus find_empty_process/verify_area helpers.
  * Fork is rather simple, once you get the hang of it, but the memory
  * management can be a bitch. See 'mm/mm.c': 'copy_page_tables()'
  */
