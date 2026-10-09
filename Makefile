@@ -37,6 +37,7 @@ CHR_DRV_SRC  = kernel/chr_drv/tty_io.c kernel/chr_drv/console.c kernel/chr_drv/k
 	      kernel/chr_drv/tty_ioctl.s
 
 KERNEL_SRC  = kernel/sched.c kernel/system_call.s kernel/traps.s kernel/asm.s kernel/task.c \
+	kernel/kthread.c \
 	kernel/panic.c kernel/printk.c kernel/vsprintf.c kernel/sys.c kernel/exit.c \
 	kernel/signal.c kernel/mktime.c
 
