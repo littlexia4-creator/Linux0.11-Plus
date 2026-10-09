@@ -12,6 +12,7 @@
  * management can be a bitch. See 'mm/mm.c': 'copy_page_tables()'
  */
 #include <errno.h>
+#include <sched.h>
 
 #include <linux/sched.h>
 #include <linux/kernel.h>
@@ -173,9 +174,8 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 }
 
 /*
- * clone(fn, arg, stack_top) -- create a user thread.  The ebx/ecx/edx
- * parameters below carry the syscall argument registers (fn, arg,
- * stack_top) exactly like copy_process sees fork's frame.
+ * Raw clone(fn, arg, stack_top, flags) -- create a user thread.
+ * ebx/ecx/edx carry fn/arg/stack_top and the saved esi carries flags.
  * The C wrapper exposes clone(fn, stack_top, flags, arg).
  *
  * Same as copy_process except:
@@ -198,6 +198,9 @@ int do_clone(long ebp,long edi,long esi,long gs,long none,
 	int i, nr, error;
 	struct file *f;
 
+	/* This kernel supports one sharing policy; reject all other masks. */
+	if (esi != (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD))
+		return -EINVAL;
 	if (!current->group || current->group->exiting ||
 	    current->group->exec_task)
 		return -EAGAIN;
