@@ -19,4 +19,5 @@ boot/setup.bin
 root-files/*
 !root-files/kthread_demo.c
 !root-files/thr.c
+!root-files/build_thr.sh
 !root-files/strncpy_test.c
