@@ -21,6 +21,7 @@
 #define TASK_UNINTERRUPTIBLE	2
 #define TASK_ZOMBIE		3
 #define TASK_STOPPED		4
+#define TASK_DEAD		5 /* released after switching away from its stack */
 
 #ifndef NULL
 #define NULL ((void *) 0)
@@ -100,6 +101,27 @@ struct kthread_info {
 	struct task_struct *wait_head;	/* join() sleepers queue on this */
 };
 
+/* One page per process. Completions outlive the corresponding task stacks.
+ * Join releases a completion slot; unjoined results count toward NR_TASKS
+ * (including the leader), and clone returns EAGAIN when the table is full. */
+struct thread_completion {
+	long tid, joiner;
+	int done, status;
+};
+
+struct thread_group {
+	int refs, live;
+	long tgid;
+	unsigned long base;
+	struct task_struct *leader, *exec_task;
+	struct sigaction action[32];
+	unsigned long pending;
+	long alarm;
+	int exiting, exit_code, stopped, stop_report;
+	long utime, stime, cutime, cstime;
+	struct thread_completion completion[NR_TASKS];
+};
+
 struct task_struct {
 /* these are hardcoded - don't touch */
 	struct tcb tcb;		/* state, counter, priority @ 0/4/8 */
@@ -111,7 +133,7 @@ struct task_struct {
 	unsigned long start_code,end_code,end_data,brk,start_stack;
 	long tid;		/* unique task/thread ID */
 	long tgid;		/* process ID; shared by cloned threads */
-	struct task_struct *real_parent; /* parent task; initially the creator */
+	struct task_struct *real_parent; /* parent task; shared by cloned threads */
 	long pgrp,session,leader;
 	unsigned short uid,euid,suid;
 	unsigned short gid,egid,sgid;
@@ -132,6 +154,7 @@ struct task_struct {
 	struct tss_struct tss;
 /* kernel-thread info (appended: keeps every asm-visible offset intact) */
 	struct kthread_info kthread;
+	struct thread_group *group; /* NULL for idle and kernel threads */
 };
 
 /*
@@ -160,6 +183,7 @@ struct task_struct {
 		{} \
 	}, \
 /* kthread */ {NULL,NULL,{0},NULL}, \
+/* group */ NULL, \
 }
 
 extern struct task_struct *task[NR_TASKS];
@@ -196,6 +220,30 @@ extern struct task_struct *kthread_run(long (*fn)(void *), void *arg, const char
 extern int  kernel_thread(long (*fn)(void *), void *arg, const char *name);
 extern void kthread_exit(long code) __attribute__((noreturn));
 extern int  kthread_join(struct task_struct *t);
+
+extern int new_thread_group(struct task_struct *p);
+extern void release(struct task_struct *p);
+extern void reap_dead_tasks(void);
+extern void wake_thread_group(struct thread_group *g);
+extern void notify_parent(struct thread_group *g);
+extern void finish_thread(long code);
+extern int de_thread(void);
+extern void request_group_exit(struct thread_group *g, int code);
+extern int do_exit(long code);
+extern int do_group_exit(long code);
+extern void send_group_signal(struct thread_group *g, int sig);
+extern int get_signal(void);
+
+static inline struct sigaction *task_actions(struct task_struct *p)
+{
+	return p->group ? p->group->action : p->sigaction;
+}
+
+static inline unsigned long pending_signals(struct task_struct *p)
+{
+	return p->signal | (p->group ? p->group->pending : 0);
+}
+
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall
@@ -301,5 +349,11 @@ static inline unsigned long _get_base(char * addr)
 unsigned long __limit; \
 __asm__("lsll %1,%0\n\tincl %0":"=r" (__limit):"r" (segment)); \
 __limit;})
+
+static inline int user_range(unsigned long addr, unsigned long size)
+{
+	unsigned long limit = get_limit(0x17);
+	return addr && addr < limit && size <= limit - addr;
+}
 
 #endif

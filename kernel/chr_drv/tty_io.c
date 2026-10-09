@@ -110,19 +110,22 @@ void tty_init(void)
 
 void tty_intr(struct tty_struct * tty, int mask)
 {
-	int i;
+	int i, sig;
 
 	if (tty->pgrp <= 0)
 		return;
 	for (i=0;i<NR_TASKS;i++)
-		if (task[i] && task[i]->pgrp==tty->pgrp)
-			task[i]->signal |= mask;
+		if (task[i] && task[i]->group && task[i] == task[i]->group->leader &&
+		    task[i]->pgrp==tty->pgrp)
+			for (sig=1; sig<=32; sig++)
+				if ((unsigned long)mask & (1UL << (sig-1)))
+					send_group_signal(task[i]->group, sig);
 }
 
 static void sleep_if_empty(struct tty_queue * queue)
 {
 	cli();
-	while (!current->signal && EMPTY(*queue))
+	while (!(pending_signals(current) & ~current->blocked) && EMPTY(*queue))
 		interruptible_sleep_on(&queue->proc_list);
 	sti();
 }
@@ -132,7 +135,7 @@ static void sleep_if_full(struct tty_queue * queue)
 	if (!FULL(*queue))
 		return;
 	cli();
-	while (!current->signal && LEFT(*queue)<128)
+	while (!(pending_signals(current) & ~current->blocked) && LEFT(*queue)<128)
 		interruptible_sleep_on(&queue->proc_list);
 	sti();
 }
@@ -251,7 +254,7 @@ int tty_read(unsigned channel, char * buf, int nr)
 			current->signal &= ~ALRMMASK;
 			break;
 		}
-		if (current->signal)
+		if (pending_signals(current) & ~current->blocked)
 			break;
 		if (EMPTY(tty->secondary) || (L_CANON(tty) &&
 		!tty->secondary.data && LEFT(tty->secondary)>20)) {
@@ -283,7 +286,7 @@ int tty_read(unsigned channel, char * buf, int nr)
 			break;
 	}
 	current->alarm = oldalarm;
-	if (current->signal && !(b-buf))
+	if ((pending_signals(current) & ~current->blocked) && !(b-buf))
 		return -EINTR;
 	return (b-buf);
 }
@@ -298,7 +301,7 @@ int tty_write(unsigned channel, char * buf, int nr)
 	tty = channel + tty_table;
 	while (nr>0) {
 		sleep_if_full(&tty->write_q);
-		if (current->signal)
+		if (pending_signals(current) & ~current->blocked)
 			break;
 		while (nr>0 && !FULL(tty->write_q)) {
 			c=get_fs_byte(b);

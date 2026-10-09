@@ -41,6 +41,7 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 	p->tid = last_tid;
 	p->tgid = p->tid;	/* fork and kernel threads start a new process */
 	p->real_parent = current;
+	p->group = NULL;
 	p->tcb.counter = p->tcb.priority;
 	p->signal = 0;
 	p->alarm = 0;
@@ -150,6 +151,12 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 		free_page((long) p);
 		return -EAGAIN;
 	}
+	if (new_thread_group(p)) {
+		free_page_tables(p->start_code, get_limit(0x17));
+		task[nr] = NULL;
+		free_page((long) p);
+		return -ENOMEM;
+	}
 	for (i=0; i<NR_OPEN;i++)
 		if ((f=p->filp[i]))
 			f->f_count++;
@@ -165,8 +172,9 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 
 int find_empty_process(void)
 {
-	int i;
+	int i, j, used;
 
+	reap_dead_tasks();
 	repeat:
 		if (last_tid >= 0x7fffffff) last_tid=1;
 		else ++last_tid;
@@ -174,8 +182,23 @@ int find_empty_process(void)
 			/* Reserve the TGID even after its leader is reaped. */
 			if (task[i] && (task[i]->tid == last_tid ||
 			    task[i]->tgid == last_tid)) goto repeat;
-	for(i=1 ; i<NR_TASKS ; i++)
-		if (!task[i])
+		/* A completed thread can still have an uncollected join handle. */
+		for (i=1; i<NR_TASKS; i++)
+			if (task[i] && task[i]->group && task[i] == task[i]->group->leader)
+				for (j=0; j<NR_TASKS; j++)
+					if (task[i]->group->completion[j].tid == last_tid)
+						goto repeat;
+	for(i=1 ; i<NR_TASKS ; i++) {
+		if (task[i])
+			continue;
+		/* A nonleader exec may retain the original leader's VM slot. */
+		used = 0;
+		for (j=1; j<NR_TASKS; j++)
+			if (task[j] && task[j]->group && task[j]->group->live &&
+			    task[j]->group->base == (unsigned long)i * 0x4000000)
+				used = 1;
+		if (!used)
 			return i;
+	}
 	return -EAGAIN;
 }

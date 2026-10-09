@@ -36,8 +36,6 @@ register unsigned short __res; \
 __asm__("mov %%fs,%%ax":"=a" (__res):); \
 __res;})
 
-int do_exit(long code);
-
 void page_exception(void);
 
 void divide_error(void);
@@ -82,7 +80,7 @@ static void die(char * str,long esp_ptr,long nr)
 	for(i=0;i<10;i++)
 		printk("%02x ",0xff & get_seg_byte(esp[1],(i+(char *)esp[0])));
 	printk("\n\r");
-	do_exit(11);		/* play segment exception */
+	do_group_exit(SIGSEGV);
 }
 
 void do_double_fault(long esp, long error_code)

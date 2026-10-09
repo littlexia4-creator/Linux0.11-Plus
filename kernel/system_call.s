@@ -110,18 +110,12 @@ ret_from_sys_call:
 	jne 3f
 	cmpw $0x17,OLDSS(%esp)		# was stack segment = 0x17 ?
 	jne 3f
-	movl signal(%eax),%ebx
-	movl blocked(%eax),%ecx
-	notl %ecx
-	andl %ebx,%ecx
-	bsfl %ecx,%ecx
+	call _get_signal		# includes process pending signals and group exit
+	testl %eax,%eax
 	je 3f
-	btrl %ecx,%ebx
-	movl %ebx,signal(%eax)
-	incl %ecx
 	movl %esp,%edx		# pointer to the saved registers/iret frame
 	pushl %edx
-	pushl %ecx
+	pushl %eax
 	call _do_signal
 	addl $8,%esp
 3:	popl %eax
