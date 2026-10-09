@@ -77,11 +77,21 @@ struct tss_struct {
 	struct i387_struct i387;
 };
 
-struct task_struct {
-/* these are hardcoded - don't touch */
+/*
+ * Thread control block.  The scheduler state lives here.  It MUST be
+ * exactly 12 bytes and stay the first member of task_struct:
+ * kernel/system_call.s hardcodes the offsets state=0, counter=4,
+ * priority=8 (and signal=12, blocked=528 after it).
+ */
+struct tcb {
 	long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
 	long counter;
 	long priority;
+};
+
+struct task_struct {
+/* these are hardcoded - don't touch */
+	struct tcb tcb;		/* state, counter, priority @ 0/4/8 */
 	long signal;
 	struct sigaction sigaction[32];
 	long blocked;	/* bitmap of masked signals */
@@ -113,7 +123,7 @@ struct task_struct {
  * your own risk!. Base=0, limit=0x9ffff (=640kB)
  */
 #define INIT_TASK \
-/* state etc */	{ 0,15,15, \
+/* tcb */	{ {0,15,15}, \
 /* signals */	0,{{},},0, \
 /* ec,brk... */	0,0,0,0,0,0, \
 /* pid etc.. */	0,-1,0,0,0, \
@@ -147,6 +157,7 @@ extern void add_timer(long jiffies, void (*fn)(void));
 extern void sleep_on(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);
 extern void wake_up(struct task_struct ** p);
+
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall

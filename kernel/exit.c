@@ -107,7 +107,7 @@ int do_exit(long code)
 	for (i=0 ; i<NR_TASKS ; i++)
 		if (task[i] && task[i]->father == current->pid) {
 			task[i]->father = 1;
-			if (task[i]->state == TASK_ZOMBIE)
+			if (task[i]->tcb.state == TASK_ZOMBIE)
 				/* assumption task[1] is always init */
 				(void) send_sig(SIGCHLD, task[1], 1);
 		}
@@ -126,7 +126,7 @@ int do_exit(long code)
 		last_task_used_math = NULL;
 	if (current->leader)
 		kill_session();
-	current->state = TASK_ZOMBIE;
+	current->tcb.state = TASK_ZOMBIE;
 	current->exit_code = code;
 	tell_father(current->father);
 	schedule();
@@ -161,7 +161,7 @@ repeat:
 			if ((*p)->pgrp != -pid)
 				continue;
 		}
-		switch ((*p)->state) {
+		switch ((*p)->tcb.state) {
 			case TASK_STOPPED:
 				if (!(options & WUNTRACED))
 					continue;
@@ -183,7 +183,7 @@ repeat:
 	if (flag) {
 		if (options & WNOHANG)
 			return 0;
-		current->state=TASK_INTERRUPTIBLE;
+		current->tcb.state=TASK_INTERRUPTIBLE;
 		schedule();
 		if (!(current->signal &= ~(1<<(SIGCHLD-1))))
 			goto repeat;
