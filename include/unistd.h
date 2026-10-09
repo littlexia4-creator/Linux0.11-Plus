@@ -131,7 +131,7 @@
 #define __NR_setregid	71
 #define __NR_gettid	72	/* calling task's thread ID */
 #define __NR_clone	73	/* user threads sharing the address space */
-/* 74 is reserved for the removed user-thread join syscall. */
+#define __NR_kthread_demo	74	/* run the kernel-thread demo */
 #define __NR_exit_group	75	/* terminate all threads in this process */
 #define __NR_futex	76	/* minimal process-local wait/wake */
 
