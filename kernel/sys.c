@@ -155,21 +155,33 @@ int sys_stime(long * tptr)
 
 int sys_times(struct tms * tbuf)
 {
+	struct thread_group *g = current->group;
+	long utime = g ? g->utime : 0, stime = g ? g->stime : 0;
+	int i;
+	for (i=0; i<NR_TASKS; i++)
+		if (task[i] && task[i]->group == g &&
+		    task[i]->tcb.state != TASK_ZOMBIE && task[i]->tcb.state != TASK_DEAD) {
+			utime += task[i]->utime;
+			stime += task[i]->stime;
+		}
 	if (tbuf) {
 		verify_area(tbuf,sizeof *tbuf);
-		put_fs_long(current->utime,(unsigned long *)&tbuf->tms_utime);
-		put_fs_long(current->stime,(unsigned long *)&tbuf->tms_stime);
-		put_fs_long(current->cutime,(unsigned long *)&tbuf->tms_cutime);
-		put_fs_long(current->cstime,(unsigned long *)&tbuf->tms_cstime);
+		put_fs_long(utime,(unsigned long *)&tbuf->tms_utime);
+		put_fs_long(stime,(unsigned long *)&tbuf->tms_stime);
+		put_fs_long(g ? g->cutime : 0,(unsigned long *)&tbuf->tms_cutime);
+		put_fs_long(g ? g->cstime : 0,(unsigned long *)&tbuf->tms_cstime);
 	}
 	return jiffies;
 }
 
 int sys_brk(unsigned long end_data_seg)
 {
+	int i;
 	if (end_data_seg >= current->end_code &&
 	    end_data_seg < current->start_stack - 16384)
-		current->brk = end_data_seg;
+		for (i=1; i<NR_TASKS; i++)
+			if (task[i] && task[i]->group == current->group)
+				task[i]->brk = end_data_seg;
 	return current->brk;
 }
 
