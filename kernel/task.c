@@ -176,6 +176,7 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
  * clone(fn, arg, stack_top) -- create a user thread.  The ebx/ecx/edx
  * parameters below carry the syscall argument registers (fn, arg,
  * stack_top) exactly like copy_process sees fork's frame.
+ * The C wrapper exposes clone(fn, stack_top, flags, arg).
  *
  * Same as copy_process except:
  *  - copy_mem() is skipped: the child inherits the parent's LDT
@@ -186,6 +187,7 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
  *    first frame in already-shared memory through the parent's fs:
  *      [esp]   = 0    invalid return address: the entry must call sys_exit
  *      [esp+4] = arg  cdecl argument for fn(arg)
+ *    lib/clone.c supplies an entry wrapper that exits after the callback.
  */
 int do_clone(long ebp,long edi,long esi,long gs,long none,
 		long ebx,long ecx,long edx,

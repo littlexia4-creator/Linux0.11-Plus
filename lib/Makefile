@@ -25,7 +25,7 @@ CPP	=gcc -E -nostdinc -I../include
 	-c -o $*.o $<
 
 OBJS  = ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o \
-	execve.o wait.o string.o malloc.o gettid.o futex.o
+	execve.o wait.o string.o malloc.o clone.o gettid.o exit_group.o futex.o
 
 lib.a: $(OBJS) Makefile
 	rm -f $@
@@ -43,6 +43,8 @@ dep:
 	cp tmp_make Makefile
 
 ### Dependencies:
+exit_group.o clone.o: ../include/unistd.h
+clone.o: ../include/sched.h
 gettid.o: ../include/unistd.h
 futex.o: ../include/unistd.h ../include/linux/futex.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
