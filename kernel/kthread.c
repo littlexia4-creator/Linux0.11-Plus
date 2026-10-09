@@ -12,8 +12,8 @@
  *  Threads yield voluntarily (the 0.11 timer never preempts CPL0 code) and
  *  are joined with kthread_join(), which also reclaims the task slot.
  *
- *  Threads do not use do_exit(): that path assumes user memory
- *  (lsll on the LDT, free_page_tables on LDT bases).  kthread_exit()
+ *  Threads do not use do_exit(): that path requires a user thread group
+ *  and tears down its files and user address space. kthread_exit()
  *  instead marks the TCB zombie and wakes joiners, and reaping is
  *  exclusively done by kthread_join(), never by sys_waitpid.
  */

@@ -21,6 +21,7 @@
 #define TASK_SLEEP_UNINTERRUPTIBLE	2
 #define TASK_ZOMBIE		3
 #define TASK_STOPPED		4
+#define TASK_DEAD		5 /* released after switching away from its stack */
 
 #ifndef NULL
 #define NULL ((void *) 0)
@@ -97,6 +98,16 @@ struct kthread_info {
 	struct task_struct *wait_head;	/* join() sleepers queue on this */
 };
 
+/* Shared process lifecycle and accounting state; one page per group. */
+struct thread_group {
+	int refs, live;
+	long tgid;
+	unsigned long base;
+	struct task_struct *leader;
+	int exit_code;
+	long utime, stime, cutime, cstime;
+};
+
 struct task_struct {
 /* these are hardcoded - don't touch */
 	struct tcb tcb;		/* state, counter, priority @ 0/4/8 */
@@ -108,7 +119,7 @@ struct task_struct {
 	unsigned long start_code,end_code,end_data,brk,start_stack;
 	long tid;		/* unique task/thread ID */
 	long tgid;		/* process ID; shared by cloned threads */
-	struct task_struct *real_parent; /* parent task; initially the creator */
+	struct task_struct *real_parent; /* parent task; shared by cloned threads */
 	long pgrp,session,leader;
 	unsigned short uid,euid,suid;
 	unsigned short gid,egid,sgid;
@@ -129,6 +140,7 @@ struct task_struct {
 	struct tss_struct tss;
 /* kernel-thread info (appended: keeps every asm-visible offset intact) */
 	struct kthread_info kthread;
+	struct thread_group *group; /* NULL for idle and kernel threads */
 };
 
 /*
@@ -157,6 +169,7 @@ struct task_struct {
 		{} \
 	}, \
 /* kthread */ {NULL,NULL,{0},NULL}, \
+/* group */ NULL, \
 }
 
 extern struct task_struct *task[NR_TASKS];
@@ -185,6 +198,14 @@ extern void reparent_children(struct task_struct *parent);
 extern struct task_struct *kthread_run(long (*fn)(void *), void *arg, const char *name);
 extern void kthread_exit(long code) __attribute__((noreturn));
 extern int  kthread_join(struct task_struct *t);
+
+extern int new_thread_group(struct task_struct *p);
+extern void release(struct task_struct *p);
+extern void reap_dead_tasks(void);
+extern void wake_thread_group(struct thread_group *g);
+extern void do_notify_parent(struct thread_group *g);
+extern void finish_thread(long code);
+
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall
@@ -290,5 +311,11 @@ static inline unsigned long _get_base(char * addr)
 unsigned long __limit; \
 __asm__("lsll %1,%0\n\tincl %0":"=r" (__limit):"r" (segment)); \
 __limit;})
+
+static inline int user_range(unsigned long addr, unsigned long size)
+{
+	unsigned long limit = get_limit(0x17);
+	return addr && addr < limit && size <= limit - addr;
+}
 
 #endif
