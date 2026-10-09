@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build (MinGW32 toolchain + NASM) and boot Linux 0.11 in Bochs.
+# Build the kernel and guest libraries, then boot Linux 0.11 in Bochs.
 # Run from Git Bash / MSYS only: the Makefiles need a POSIX shell
 # ('cd xxx ; make', rm, sync) -- the cmd.exe make in run.bat cannot
 # run them and can leave a corrupt mixed build.
@@ -14,6 +14,14 @@ export PATH
 rm -f hdc-0.11.img.lock
 
 make || exit 1
+
+# Stage the a.out archives built by MinGW32-i386-linux for the guest linker.
+mkdir -p root-files/lib root-files/include/linux || exit 1
+cp lib/libc_syscalls.a root-files/lib/libc_syscalls.a || exit 1
+# Keep the guest demos' headers in sync with the archive.
+cp include/unistd.h root-files/include/unistd.h || exit 1
+cp include/sched.h root-files/include/sched.h || exit 1
+cp include/linux/futex.h root-files/include/linux/futex.h || exit 1
 
 # overlay: stage root-files/* into the guest disk image
 ./overlay.sh || exit 1
