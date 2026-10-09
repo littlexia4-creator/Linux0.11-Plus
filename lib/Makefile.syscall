@@ -1,0 +1,22 @@
+# Build the guest syscall archive on Windows with the i386 a.out toolchain.
+SYSCALL_TOOLCHAIN ?= ../../MinGW32-i386-linux
+CC = $(SYSCALL_TOOLCHAIN)/bin/i386-linux011-gcc.cmd
+AR = $(SYSCALL_TOOLCHAIN)/bin/i386-linux011-ar.exe
+CFLAGS = -O -nostdinc -I../include
+
+# Keep a.out objects separate from the kernel's PE/COFF objects.
+OBJS = syscall/clone.o syscall/gettid.o syscall/thread_join.o syscall/exit_group.o
+HEADERS = ../include/unistd.h ../include/sched.h ../include/errno.h ../include/sys/stat.h \
+	../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h ../include/utime.h
+
+libsyscall.a: $(OBJS) Makefile.syscall
+	rm -f $@
+	"$(AR)" rcs $@ $(OBJS)
+
+syscall/%.o: %.c $(HEADERS) Makefile.syscall
+	mkdir -p syscall
+	"$(CC)" $(CFLAGS) -c -o $@ $<
+
+.PHONY: clean
+clean:
+	rm -f libsyscall.a $(OBJS)
