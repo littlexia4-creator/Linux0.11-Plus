@@ -24,6 +24,20 @@ int new_thread_group(struct task_struct *p)
 	return 0;
 }
 
+int join_thread_group(struct task_struct *p)
+{
+	struct thread_group *g = current->group;
+
+	if (!g || g->exiting || g->exec_task)
+		return -EAGAIN;
+	g->refs++;
+	g->live++;
+	p->group = g;
+	p->tgid = g->tgid;
+	p->real_parent = current->real_parent;
+	return 0;
+}
+
 void reap_dead_tasks(void)
 {
 	int i;
@@ -89,6 +103,11 @@ int do_group_exit(long code)
 	if (current->group)
 		request_group_exit(current->group, code);
 	return do_exit(code);
+}
+
+int sys_exit_group(int code)
+{
+	return do_group_exit((code & 255) << 8);
 }
 
 /* Called after this thread has closed its own files and inode references. */
