@@ -28,12 +28,10 @@
 #include <linux/head.h>
 #include <linux/kernel.h>
 
-volatile void do_exit(long code);
-
 static inline volatile void oom(void)
 {
 	printk("out of memory\n\r");
-	do_exit(SIGSEGV);
+	do_group_exit(SIGSEGV);
 }
 
 #define invalidate() \
@@ -250,7 +248,7 @@ void do_wp_page(unsigned long error_code,unsigned long address)
 /* we cannot do this yet: the estdio library writes to code space */
 /* stupid, stupid. I really want the libc.a from GNU */
 	if (CODE_SPACE(address))
-		do_exit(SIGSEGV);
+		do_group_exit(SIGSEGV);
 #endif
 	un_wp_page((unsigned long *)
 		(((address>>10) & 0xffc) + (0xfffff000 &
