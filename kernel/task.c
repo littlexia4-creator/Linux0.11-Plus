@@ -5,8 +5,9 @@
  */
 
 /*
- *  'task.c' contains the task-creation machinery: copy_process() for
- * the 'fork' system call, plus shared allocation and startup helpers.
+ *  'task.c' contains the task-creation routines: copy_process() for
+ * the 'fork' syscall (processes) and do_clone() for 'clone' (user
+ * threads), plus shared setup and activation for kernel threads.
  * Fork is rather simple, once you get the hang of it, but the memory
  * management can be a bitch. See 'mm/mm.c': 'copy_page_tables()'
  */
@@ -25,9 +26,9 @@ long last_tid=0;
  * Allocate a task after find_empty_process() selects nr/tid.
  * User tasks inherit current; kernel threads use task[0] as their template.
  * Only task_struct is copied, not the supervisor stack in the same page.
- * Reserve the slot before further setup, but keep the task unrunnable
- * until explicitly woken. On failure the caller must clear task[nr] and
- * free the page.
+ * Reserve the slot before setup can sleep (e.g. a clone stack page fault),
+ * but keep the task unrunnable until explicitly woken. On failure the caller
+ * must clear task[nr] and free the page.
  */
 struct task_struct *alloc_task(int nr, const struct task_struct *template)
 {
@@ -64,7 +65,7 @@ void setup_task(int nr, struct task_struct *p)
 	set_ldt_desc(gdt+(nr<<1)+FIRST_LDT_ENTRY,&(p->ldt));
 }
 
-/* Fork makes the child runnable as soon as setup is complete. */
+/* Fork and clone make the child runnable as soon as setup is complete. */
 void start_task(int nr, struct task_struct *p)
 {
 	setup_task(nr, p);
@@ -168,6 +169,79 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 		current->executable->i_count++;
 	start_task(nr, p);
 	return p->tgid;
+}
+
+/*
+ * clone(fn, arg, stack_top) -- create a user thread.  The ebx/ecx/edx
+ * parameters below carry the syscall argument registers (fn, arg,
+ * stack_top) exactly like copy_process sees fork's frame.
+ *
+ * Same as copy_process except:
+ *  - copy_mem() is skipped: the child inherits the parent's LDT
+ *    descriptors and start_code, so both tasks use the same page
+ *    tables (writes to shared pages are plain writes -- pages stay
+ *    RW because copy_page_tables never marks them read-only here).
+ *  - the child starts at fn with a fresh user stack; we build its
+ *    first frame in already-shared memory through the parent's fs:
+ *      [esp]   = 0    invalid return address: the entry must call sys_exit
+ *      [esp+4] = arg  cdecl argument for fn(arg)
+ */
+int do_clone(long ebp,long edi,long esi,long gs,long none,
+		long ebx,long ecx,long edx,
+		long fs,long es,long ds,
+		long eip,long cs,long eflags,long esp,long ss)
+{
+	struct task_struct *p;
+	int i, nr, error;
+	struct file *f;
+
+	if (!current->group || current->group->exiting ||
+	    current->group->exec_task)
+		return -EAGAIN;
+	if (!ebx || (unsigned long) ebx >= get_limit(0x0f) ||
+	    edx < 8 || !user_range(edx - 8, 8))
+		return -EFAULT;
+	/* Write the frame before reserving a task or group reference:
+	 * verify_area handles COW, but does not fault in missing pages. */
+	verify_area((void *)(edx - 8), 8);
+	put_fs_long(0, (unsigned long *) (edx - 8));
+	put_fs_long(ecx, (unsigned long *) (edx - 4));
+	if ((nr = find_empty_process()) < 0)
+		return nr;
+	p = alloc_task(nr, current);
+	if (!p)
+		return -EAGAIN;
+	if ((error = join_thread_group(p))) {
+		task[nr] = NULL;
+		free_page((long) p);
+		return error;
+	}
+	p->tss.eip = ebx;		/* thread entry point */
+	p->tss.eflags = eflags;
+	p->tss.eax = 0;
+	p->tss.esp = edx - 8;		/* thread's private user stack */
+	p->tss.ebp = ebp;
+	p->tss.esi = esi;
+	p->tss.edi = edi;
+	p->tss.es = es & 0xffff;
+	p->tss.cs = cs & 0xffff;
+	p->tss.ss = ss & 0xffff;
+	p->tss.ds = ds & 0xffff;
+	p->tss.fs = fs & 0xffff;
+	p->tss.gs = gs & 0xffff;
+	if (last_task_used_math == current)
+		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
+	for (i=0; i<NR_OPEN;i++)
+		if ((f=p->filp[i]))
+			f->f_count++;
+	if (current->pwd)
+		current->pwd->i_count++;
+	if (current->root)
+		current->root->i_count++;
+	if (current->executable)
+		current->executable->i_count++;
+	start_task(nr, p);
+	return p->tid;
 }
 
 int find_empty_process(void)

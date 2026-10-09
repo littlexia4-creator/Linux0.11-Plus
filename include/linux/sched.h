@@ -213,6 +213,7 @@ extern void kthread_exit(long code) __attribute__((noreturn));
 extern int  kthread_join(struct task_struct *t);
 
 extern int new_thread_group(struct task_struct *p);
+extern int join_thread_group(struct task_struct *p);
 extern void release(struct task_struct *p);
 extern void reap_dead_tasks(void);
 extern void wake_thread_group(struct thread_group *g);
