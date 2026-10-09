@@ -194,6 +194,10 @@ int do_execve(unsigned long * eip,long tmp,char * filename,
 
 	if ((0xffff & eip[1]) != 0x000f)
 		panic("execve called from supervisor mode");
+	/* A user thread shares its page tables with its siblings; exec
+	   below would free them out from under the group. */
+	if (space_shared())
+		return -EINVAL;
 	for (i=0 ; i<MAX_ARG_PAGES ; i++)	/* clear page-table */
 		page[i]=0;
 	if (!(inode=namei(filename)))		/* get executables inode */
