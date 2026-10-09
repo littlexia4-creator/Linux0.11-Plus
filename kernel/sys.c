@@ -13,6 +13,11 @@
 #include <sys/times.h>
 #include <sys/utsname.h>
 
+int sys_ni_syscall(void)
+{
+	return -ENOSYS;
+}
+
 int sys_ftime()
 {
 	return -ENOSYS;
