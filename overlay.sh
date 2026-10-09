@@ -10,8 +10,13 @@ cd "$(dirname "$0")" || exit 1
 
 (cd root-files && find . -type f) | while read -r f; do
 	p="${f#./}"
-	d=$(dirname "$p")
+	# Minix V1 directory entries allow at most 14 characters per name.
+	case "$p" in
+		lib/libc_syscalls.a) destination="lib/libcsyscalls.a" ;;
+		*) destination="$p" ;;
+	esac
+	d=$(dirname "$destination")
 	[ "$d" != "." ] && \
 		MSYS_NO_PATHCONV=1 python tools/minix.py hdc-0.11.img mkdir "/usr/root/$d" 2>/dev/null
-	MSYS_NO_PATHCONV=1 python tools/minix.py hdc-0.11.img put "root-files/$p" "/usr/root/$p"
+	MSYS_NO_PATHCONV=1 python tools/minix.py hdc-0.11.img put "root-files/$p" "/usr/root/$destination"
 done
