@@ -58,13 +58,13 @@ sa_mask = 4
 sa_flags = 8
 sa_restorer = 12
 
-nr_system_calls = 72
+nr_system_calls = 73
 
 /*
  * Ok, I get parallel printer interrupts while using the floppy for some
  * strange reason. Urgel. Now I just ignore them.
  */
-.globl _system_call,_sys_fork,_timer_interrupt,_sys_execve
+.globl _system_call,_sys_fork,_sys_clone,_timer_interrupt,_sys_execve
 .globl _hd_interrupt,_floppy_interrupt,_parallel_interrupt
 .globl _device_not_available, _coprocessor_error
 
@@ -215,6 +215,25 @@ _sys_fork:
 	pushl %ebp
 	pushl %eax
 	call _copy_process
+	addl $20,%esp
+1:	ret
+
+/*
+ * clone(fn, arg, stack_top): ebx=fn, ecx=arg, edx=stack_top are already
+ * pushed by the generic syscall path and flow into do_clone's frame
+ * parameters exactly like copy_process's ebx/ecx/edx.
+ */
+.align 2
+_sys_clone:
+	call _find_empty_process
+	testl %eax,%eax
+	js 1f
+	push %gs
+	pushl %esi
+	pushl %edi
+	pushl %ebp
+	pushl %eax
+	call _do_clone
 	addl $20,%esp
 1:	ret
 

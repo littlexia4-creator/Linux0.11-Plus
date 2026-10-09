@@ -173,6 +173,7 @@ extern void wake_up(struct task_struct ** p);
 extern int  kernel_thread(long (*fn)(void *), void *arg, const char *name);
 extern void kthread_exit(long code);	/* does not return */
 extern int  kthread_join(struct task_struct *t);
+extern int  space_shared(void);		/* kernel/task.c: clone() support */
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall
