@@ -67,7 +67,7 @@ LIBS	=lib/lib.a
 	$(CC) $(CFLAGS) \
 	-nostdinc -Iinclude -c -o $*.o $<
 
-all:	Boot.img
+all:	Boot.img lib/libsyscall.a
 
 # Every task_struct user must see the same layout after a header change.
 $(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h
@@ -132,6 +132,11 @@ lib/lib.a:$(LIB_SRC) lib/Makefile include/sched.h
 	make -C ./lib
 #	(cd lib & make)
 
+# Let the syscall Makefile check its sources and headers on every build.
+.PHONY: lib/libsyscall.a
+lib/libsyscall.a:
+	$(MAKE) -C lib -f Makefile.syscall
+
 boot/setup.bin: boot/setup.asm 
 	$(AS86) -I"$(INC)" -o boot/setup.bin boot/setup.asm
 	 $(DASM) -b 16 boot/setup.bin >boot/setup.disasm
@@ -156,6 +161,7 @@ clean.win_sh:
 	rm system.map Boot.img -f
 	rm init/main.o boot/head.o boot/setup.bin boot/bootsect.bin boot/setup.disasm boot/bootsect.disasm -f
 	make clean -C ./lib 
+	$(MAKE) -C lib -f Makefile.syscall clean
 	make clean -C ./kernel 
 	make clean -C ./mm 
 	make clean -C ./fs 
