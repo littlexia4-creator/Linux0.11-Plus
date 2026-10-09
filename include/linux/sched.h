@@ -89,6 +89,14 @@ struct tcb {
 	long priority;
 };
 
+/* kernel-thread identity, used by kernel/kthread.c */
+struct kthread_info {
+	long (*entry)(void *);		/* thread function */
+	void *arg;			/* its argument */
+	char name[16];			/* for debugging/ps */
+	struct task_struct *wait_head;	/* join() sleepers queue on this */
+};
+
 struct task_struct {
 /* these are hardcoded - don't touch */
 	struct tcb tcb;		/* state, counter, priority @ 0/4/8 */
@@ -116,6 +124,8 @@ struct task_struct {
 	struct desc_struct ldt[3];
 /* tss for this task */
 	struct tss_struct tss;
+/* kernel-thread info (appended: keeps every asm-visible offset intact) */
+	struct kthread_info kthread;
 };
 
 /*
@@ -143,6 +153,7 @@ struct task_struct {
 	 _LDT(0),0x80000000, \
 		{} \
 	}, \
+/* kthread */ {NULL,NULL,{0},NULL}, \
 }
 
 extern struct task_struct *task[NR_TASKS];
@@ -158,6 +169,10 @@ extern void sleep_on(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);
 extern void wake_up(struct task_struct ** p);
 
+/* kernel threads (kernel/kthread.c) */
+extern int  kernel_thread(long (*fn)(void *), void *arg, const char *name);
+extern void kthread_exit(long code);	/* does not return */
+extern int  kthread_join(struct task_struct *t);
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall
