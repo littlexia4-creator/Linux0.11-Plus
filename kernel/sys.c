@@ -186,26 +186,29 @@ int sys_brk(unsigned long end_data_seg)
 }
 
 /*
- * Job-control operations retain their existing per-task (TID) targets.
+ * Job-control operations select processes and update all their threads.
  * This needs some heave checking ...
  * I just haven't get the stomach for it. I also don't fully
  * understand sessions/pgrp etc. Let somebody who does explain it.
  */
 int sys_setpgid(int pid, int pgid)
 {
-	int i;
+	int i, j;
 
 	if (!pid)
-		pid = current->tid;
+		pid = current->tgid;
 	if (!pgid)
-		pgid = current->tid;
+		pgid = pid;
 	for (i=0 ; i<NR_TASKS ; i++)
-		if (task[i] && task[i]->tid==pid) {
+		if (task[i] && task[i]->group && task[i] == task[i]->group->leader &&
+		    task[i]->tgid==pid) {
 			if (task[i]->leader)
 				return -EPERM;
 			if (task[i]->session != current->session)
 				return -EPERM;
-			task[i]->pgrp = pgid;
+			for (j=1; j<NR_TASKS; j++)
+				if (task[j] && task[j]->group == task[i]->group)
+					task[j]->pgrp = pgid;
 			return 0;
 		}
 	return -ESRCH;
@@ -218,11 +221,16 @@ int sys_getpgrp(void)
 
 int sys_setsid(void)
 {
-	if (current->leader && !suser())
+	int i;
+	struct task_struct *leader = current->group->leader;
+	if (leader->leader && !suser())
 		return -EPERM;
-	current->leader = 1;
-	current->session = current->pgrp = current->tid;
-	current->tty = -1;
+	leader->leader = 1;
+	for (i=1; i<NR_TASKS; i++)
+		if (task[i] && task[i]->group == current->group) {
+			task[i]->session = task[i]->pgrp = current->tgid;
+			task[i]->tty = -1;
+		}
 	return current->pgrp;
 }
 
