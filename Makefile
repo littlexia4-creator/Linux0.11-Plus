@@ -48,7 +48,7 @@ FS_SRC=	fs/open.c fs/read_write.c fs/inode.c fs/file_table.c fs/buffer.c fs/supe
 	fs/bitmap.c fs/fcntl.c fs/ioctl.c fs/truncate.c
 
 LIB_SRC  = lib/ctype.c lib/_exit.c lib/open.c lib/close.c lib/errno.c lib/write.c lib/dup.c lib/setsid.c \
-	lib/execve.c lib/wait.c lib/string.c lib/malloc.c
+	lib/execve.c lib/wait.c lib/string.c lib/malloc.c lib/clone.c
 
 ARCHIVES=kernel/kernel.o mm/mm.o fs/fs.o
 #ARCHIVES=$(KERNEL_OBJS) mm/mm.o fs/fs.o
