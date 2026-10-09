@@ -26,11 +26,22 @@ static void clone_start(void *arg)
 	_exit(args->fn(args->arg));
 }
 
+static int valid_clone(int (*fn)(void *), void *stack_top, int flags)
+{
+	/* Reject unsupported policies before writing the child's startup data. */
+	if (flags != (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD) ||
+	    !fn || !stack_top)
+		return 0;
+	return 1;
+}
+
 int __clone_raw(int (*fn)(void *), void *stack_top, int flags, void *arg)
 {
 	struct clone_args *args;
 	register int res;
 
+	if (!valid_clone(fn, stack_top, flags))
+		return -EINVAL;
 	/* Keep startup data on the child's stack after the parent returns. */
 	args = (struct clone_args *) stack_top - 1;
 	args->fn = fn;
