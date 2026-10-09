@@ -114,6 +114,13 @@ void schedule(void)
 
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 		if (*p) {
+			/* Check the shared alarm deadline once through the leader;
+			 * any eligible member can consume the resulting process signal. */
+			if ((*p)->group && *p == (*p)->group->leader &&
+			    (*p)->group->alarm && (*p)->group->alarm < jiffies) {
+				send_group_signal((*p)->group, SIGALRM);
+				(*p)->group->alarm = 0;
+			}
 			/* Per-task alarm deadlines also serve terminal read timeouts. */
 			if ((*p)->alarm && (*p)->alarm < jiffies) {
 					send_task_signal(*p, SIGALRM);
@@ -137,7 +144,7 @@ void schedule(void)
 			 *   SIGALRM   none      yes
 			 *   SIGALRM   SIGALRM   no
 			 *   SIGALRM   SIGXXX    yes */
-			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
+			if ((pending_signals(*p) & ~(_BLOCKABLE & (*p)->blocked)) &&
 			(*p)->tcb.state==TASK_SLEEP_INTERRUPTIBLE)
 				(*p)->tcb.state=TASK_RUNNING;
 		}
@@ -432,11 +439,12 @@ void do_timer(long cpl)
 
 int sys_alarm(long seconds)
 {
-	int old = current->alarm;
+	long *alarm = current->group ? &current->group->alarm : &current->alarm;
+	int old = *alarm;
 
 	if (old)
 		old = (old - jiffies) / HZ;
-	current->alarm = (seconds>0)?(jiffies+HZ*seconds):0;
+	*alarm = (seconds>0)?(jiffies+HZ*seconds):0;
 	return (old);
 }
 

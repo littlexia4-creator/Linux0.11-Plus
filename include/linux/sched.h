@@ -101,13 +101,16 @@ struct kthread_info {
 	struct task_struct *wait_head;	/* join() sleepers queue on this */
 };
 
-/* Shared process lifecycle and accounting state; one page per group. */
+/* Shared process lifecycle, accounting and signal state; one page per group. */
 struct thread_group {
 	int refs, live;
 	long tgid;
 	unsigned long base;
-	struct task_struct *leader;
-	int exit_code;
+	struct task_struct *leader, *exec_task;
+	struct sigaction action[32];
+	unsigned long pending;
+	long alarm;
+	int exiting, exit_code, stopped, stop_report;
 	long utime, stime, cutime, cstime;
 };
 
@@ -215,6 +218,22 @@ extern void reap_dead_tasks(void);
 extern void wake_thread_group(struct thread_group *g);
 extern void notify_parent(struct thread_group *g);
 extern void finish_thread(long code);
+extern int de_thread(void);
+extern void request_group_exit(struct thread_group *g, int code);
+extern int do_exit(long code);
+extern int do_group_exit(long code);
+extern void send_group_signal(struct thread_group *g, int sig);
+extern int get_signal(void);
+
+static inline struct sigaction *task_actions(struct task_struct *p)
+{
+	return p->group ? p->group->action : p->sigaction;
+}
+
+static inline unsigned long pending_signals(struct task_struct *p)
+{
+	return p->signal | (p->group ? p->group->pending : 0);
+}
 
 /* Queue a task-local signal (1..32). Callers manage wakeups and group actions. */
 static inline void send_task_signal(struct task_struct *p, int sig)
@@ -225,6 +244,17 @@ static inline void send_task_signal(struct task_struct *p, int sig)
 static inline void clear_task_pending(struct task_struct *p, unsigned long mask)
 {
 	p->signal &= ~mask;
+}
+
+/* Update shared pending bits. Callers manage locking, wakeups and dispositions. */
+static inline void set_group_pending(struct thread_group *g, unsigned long mask)
+{
+	g->pending |= mask;
+}
+
+static inline void clear_group_pending(struct thread_group *g, unsigned long mask)
+{
+	g->pending &= ~mask;
 }
 
 
