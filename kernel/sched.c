@@ -27,7 +27,7 @@ void show_task(int nr,struct task_struct * p)
 {
 	int i,j = 4096-sizeof(struct task_struct);
 
-	printk("%d: pid=%d, state=%d, ",nr,p->pid,p->state);
+	printk("%d: pid=%d, state=%d, ",nr,p->pid,p->tcb.state);
 	i=0;
 	while (i<j && !((char *)(p+1))[i])
 		i++;
@@ -115,8 +115,8 @@ void schedule(void)
 					(*p)->alarm = 0;
 				}
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
-			(*p)->state==TASK_INTERRUPTIBLE)
-				(*p)->state=TASK_RUNNING;
+			(*p)->tcb.state==TASK_INTERRUPTIBLE)
+				(*p)->tcb.state=TASK_RUNNING;
 		}
 
 /* this is the scheduler proper: */
@@ -129,21 +129,21 @@ void schedule(void)
 		while (--i) {
 			if (!*--p)
 				continue;
-			if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
-				c = (*p)->counter, next = i;
+			if ((*p)->tcb.state == TASK_RUNNING && (*p)->tcb.counter > c)
+				c = (*p)->tcb.counter, next = i;
 		}
 		if (c) break;
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)
-				(*p)->counter = ((*p)->counter >> 1) +
-						(*p)->priority;
+				(*p)->tcb.counter = ((*p)->tcb.counter >> 1) +
+						(*p)->tcb.priority;
 	}
 	switch_to(next);
 }
 
 int sys_pause(void)
 {
-	current->state = TASK_INTERRUPTIBLE;
+	current->tcb.state = TASK_INTERRUPTIBLE;
 	schedule();
 	return 0;
 }
@@ -158,10 +158,10 @@ void sleep_on(struct task_struct **p)
 		panic("task[0] trying to sleep");
 	tmp = *p;
 	*p = current;
-	current->state = TASK_UNINTERRUPTIBLE;
+	current->tcb.state = TASK_UNINTERRUPTIBLE;
 	schedule();
 	if (tmp)
-		tmp->state=0;
+		tmp->tcb.state=0;
 }
 
 void interruptible_sleep_on(struct task_struct **p)
@@ -174,21 +174,21 @@ void interruptible_sleep_on(struct task_struct **p)
 		panic("task[0] trying to sleep");
 	tmp=*p;
 	*p=current;
-repeat:	current->state = TASK_INTERRUPTIBLE;
+repeat:	current->tcb.state = TASK_INTERRUPTIBLE;
 	schedule();
 	if (*p && *p != current) {
-		(**p).state=0;
+		(**p).tcb.state=0;
 		goto repeat;
 	}
 	*p=NULL;
 	if (tmp)
-		tmp->state=0;
+		tmp->tcb.state=0;
 }
 
 void wake_up(struct task_struct **p)
 {
 	if (p && *p) {
-		(**p).state=0;
+		(**p).tcb.state=0;
 		*p=NULL;
 	}
 }
@@ -329,8 +329,8 @@ void do_timer(long cpl)
 	}
 	if (current_DOR & 0xf0)
 		do_floppy_timer();
-	if ((--current->counter)>0) return;
-	current->counter=0;
+	if ((--current->tcb.counter)>0) return;
+	current->tcb.counter=0;
 	if (!cpl) return;
 	schedule();
 }
@@ -377,8 +377,8 @@ int sys_getegid(void)
 
 int sys_nice(long increment)
 {
-	if (current->priority-increment>0)
-		current->priority -= increment;
+	if (current->tcb.priority-increment>0)
+		current->tcb.priority -= increment;
 	return 0;
 }
 
