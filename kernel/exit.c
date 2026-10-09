@@ -37,44 +37,32 @@ void release(struct task_struct * p)
 	panic("trying to release non-existent task");
 }
 
-static inline int send_sig(long sig,struct task_struct * p,int priv)
-{
-	if (!p || sig<1 || sig>32)
-		return -EINVAL;
-	if (priv || (current->euid==p->euid) || suser())
-		send_task_signal(p, sig);
-	else
-		return -EPERM;
-	return 0;
-}
-
-/*
- * Positive IDs still select one TID in this task-based signal API.
- * Process-wide signal delivery is not implemented by the identity split.
- * XXX need to check permissions needed to send signals to process
- * groups, etc. etc.  kill() permissions semantics are tricky!
- */
+/* kill selects processes; one eligible peer consumes a shared signal. */
 int sys_kill(int pid,int sig)
 {
-	struct task_struct **p = NR_TASKS + task;
-	int err, retval = 0;
-
-	if (!pid) while (--p > &FIRST_TASK) {
-		if (*p && (*p)->pgrp == current->tid)
-			if ((err=send_sig(sig,*p,1)))
-				retval = err;
-	} else if (pid>0) while (--p > &FIRST_TASK) {
-		if (*p && (*p)->tid == pid)
-			if ((err=send_sig(sig,*p,0)))
-				retval = err;
-	} else if (pid == -1) while (--p > &FIRST_TASK) {
-		if ((err = send_sig(sig,*p,0)))
-			retval = err;
-	} else while (--p > &FIRST_TASK)
-		if (*p && (*p)->pgrp == -pid)
-			if ((err = send_sig(sig,*p,0)))
-				retval = err;
-	return retval;
+	struct task_struct *p;
+	int i, result = -ESRCH, sent = 0;
+	if (sig < 0 || sig > 32)
+		return -EINVAL;
+	for (i=1; i<NR_TASKS; i++) {
+		p = task[i];
+		if (!p || !p->group || p != p->group->leader || !p->group->live)
+			continue;
+		if ((pid>0 && p->tgid!=pid) ||
+		    (!pid && p->pgrp!=current->pgrp) ||
+		    (pid < -1 && p->pgrp != -pid) ||
+		    (pid == -1 && (p->tgid == 1 || p->tgid == current->tgid)))
+			continue;
+		if (!suser() && current->uid != p->uid && current->euid != p->uid &&
+		    current->uid != p->suid && current->euid != p->suid &&
+		    !(sig == SIGCONT && current->session == p->session)) {
+			result = -EPERM;
+			continue;
+		}
+		send_group_signal(p->group, sig);
+		sent = 1;
+	}
+	return sent ? 0 : result;
 }
 
 /* Move children to a live peer, or init when the parent process ends.
@@ -132,6 +120,7 @@ int do_exit(long code)
 	return (-1);	/* just to suppress warnings */
 }
 
+/* The raw exit syscall exits one thread; exit_group exits the process. */
 int sys_exit(int error_code)
 {
 	return do_exit((error_code&0xff)<<8);
@@ -170,8 +159,9 @@ repeat:
 				put_fs_long(code, status);
 			return result;
 		}
-		if (p->tcb.state == TASK_STOPPED && (options & WUNTRACED)) {
-			code = 0x7f;
+		if (g->stop_report && (options & WUNTRACED)) {
+			code = (g->stop_report << 8) | 0x7f;
+			g->stop_report = 0;
 			if (status)
 				put_fs_long(code, status);
 			return g->tgid;
@@ -182,11 +172,12 @@ repeat:
 		return -ECHILD;
 	if (options & WNOHANG)
 		return 0;
-	code = current->signal & ~current->blocked;
-	if (current->sigaction[SIGCHLD-1].sa_handler == SIG_DFL ||
-	    current->sigaction[SIGCHLD-1].sa_handler == SIG_IGN) {
+	code = pending_signals(current) & ~current->blocked;
+	if (task_actions(current)[SIGCHLD-1].sa_handler == SIG_DFL ||
+	    task_actions(current)[SIGCHLD-1].sa_handler == SIG_IGN) {
 		code &= ~(1 << (SIGCHLD-1));
 		clear_task_pending(current, 1UL << (SIGCHLD-1));
+		clear_group_pending(current->group, 1UL << (SIGCHLD-1));
 	}
 	if (code)
 		return -EINTR;

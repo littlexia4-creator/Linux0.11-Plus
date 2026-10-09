@@ -72,7 +72,7 @@ sched.s sched.o: sched.c ../include/linux/sched.h ../include/linux/head.h \
   ../include/asm/segment.h
 signal.s signal.o: signal.c ../include/linux/sched.h ../include/linux/head.h \
   ../include/linux/fs.h ../include/sys/types.h ../include/linux/mm.h \
-  ../include/signal.h ../include/linux/kernel.h ../include/asm/segment.h
+  ../include/signal.h ../include/linux/kernel.h ../include/asm/segment.h ../include/asm/system.h
 sys.s sys.o: sys.c ../include/errno.h ../include/linux/sched.h \
   ../include/linux/head.h ../include/linux/fs.h ../include/sys/types.h \
   ../include/linux/mm.h ../include/signal.h ../include/linux/tty.h \
