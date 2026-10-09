@@ -150,3 +150,63 @@ int kthread_join(struct task_struct *t)
 	free_page((unsigned long) t);
 	return code;
 }
+
+/* ---------------- demo, started from init/main.c before sti() -------- */
+
+/*
+ * Voluntary yield.  A bare schedule() is not enough to round-robin
+ * between two runnable threads: 0.11 counters only decay through timer
+ * ticks, so a tie (both 15) always picks the same task.  Dropping our
+ * counter to 0 lets the other runnable thread win, and the recompute
+ * pass in schedule() restores us via counter/2 + priority.
+ */
+static void kthread_yield(void)
+{
+	current->tcb.counter = 0;
+	schedule();
+}
+
+static long worker(void *unused)
+{
+	int i;
+
+	for (i = 1; i <= 5; i++) {
+		printk("[%s] step %d\n", current->kthread.name, i);
+		kthread_yield();
+	}
+	return i - 1;
+}
+
+static long coordinator(void *unused)
+{
+	struct task_struct *a, *b;
+	int ra, rb;
+
+	a = kthread_create(worker, NULL, "kworkerA");
+	b = kthread_create(worker, NULL, "kworkerB");
+	printk("kthread demo: created kworkerA(pid %d) kworkerB(pid %d)\n",
+		a->pid, b->pid);
+	ra = kthread_join(a);
+	rb = kthread_join(b);
+	printk("kthread demo done: kworkerA returned %d, kworkerB returned %d\n",
+		ra, rb);
+	/*
+	 * Park forever instead of exiting: the demo runs before init's
+	 * first fork, so this thread holds pid 1 / slot 1; a zombie there
+	 * would collect orphan reparenting meant for init.  The slot stays
+	 * allocated -- that is the documented cost of this demo.
+	 */
+	sleep_on(&current->kthread.wait_head);	/* never woken */
+	return 0;				/* not reached */
+}
+
+/*
+ * Syscall 73: run the kernel-thread demo on demand (post-login),
+ * where the system is fully booted and the scheduler settles.
+ */
+int sys_kthread_demo(void)
+{
+	printk("kthread demo: starting coordinator\n");
+	kernel_thread(coordinator, NULL, "kcoord");
+	return 0;
+}
