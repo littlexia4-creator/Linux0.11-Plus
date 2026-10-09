@@ -34,6 +34,26 @@ int new_thread_group(struct task_struct *p)
 	return 0;
 }
 
+int join_thread_group(struct task_struct *p)
+{
+	struct thread_group *g = current->group;
+	struct thread_completion *c;
+
+	if (!g || g->exiting || g->exec_task)
+		return -EAGAIN;
+	c = completion(g, 0);
+	if (!c)
+		return -EAGAIN;
+	c->tid = p->tid;
+	c->joiner = c->done = c->status = 0;
+	g->refs++;
+	g->live++;
+	p->group = g;
+	p->tgid = g->tgid;
+	p->real_parent = current->real_parent;
+	return 0;
+}
+
 void reap_dead_tasks(void)
 {
 	int i;
@@ -89,6 +109,11 @@ int do_group_exit(long code)
 	return do_exit(code);
 }
 
+int sys_exit_group(int code)
+{
+	return do_group_exit((code & 255) << 8);
+}
+
 /* Called after this thread has closed its own files and inode references. */
 void finish_thread(long code)
 {
@@ -134,6 +159,55 @@ void finish_thread(long code)
 	/* Never free the stack or the loaded TSS while still executing on it. */
 	for (;;)
 		schedule();
+}
+
+/* Join any peer in this process. Status is the low eight exit-status bits. */
+int sys_thread_join(int tid, unsigned long *status)
+{
+	struct thread_group *g = current->group;
+	struct thread_completion *c, *next;
+	long owner;
+	int i, result;
+
+	if (!g || tid <= 0)
+		return -ESRCH;
+	if (tid == current->tid)
+		return -EDEADLK;
+	if (status) {
+		if (!user_range((unsigned long)status, 4))
+			return -EFAULT;
+		verify_area(status, 4);
+	}
+	c = completion(g, tid);
+	if (!c)
+		return -ESRCH;
+	if (c->joiner)
+		return -EINVAL;
+	/* Follow join ownership to reject cycles before going to sleep. */
+	owner = current->tid;
+	for (i=0; i<NR_TASKS; i++) {
+		next = completion(g, owner);
+		if (!next || !next->joiner)
+			break;
+		owner = next->joiner;
+		if (owner == tid)
+			return -EDEADLK;
+	}
+	c->joiner = current->tid;
+	while (!c->done) {
+		if ((pending_signals(current) & ~current->blocked) ||
+		    g->exiting || (g->exec_task && g->exec_task != current)) {
+			c->joiner = 0;
+			return -EINTR;
+		}
+		current->tcb.state = TASK_INTERRUPTIBLE;
+		schedule();
+	}
+	result = c->status;
+	c->tid = c->joiner = 0;
+	if (status)
+		put_fs_long(result, status);
+	return 0;
 }
 
 /* Commit exec only after validation and argument copying have succeeded. */

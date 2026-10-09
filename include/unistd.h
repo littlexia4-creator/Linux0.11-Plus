@@ -130,6 +130,9 @@
 #define __NR_setreuid	70
 #define __NR_setregid	71
 #define __NR_gettid	72	/* calling task's thread ID */
+#define __NR_clone	73	/* user threads sharing the address space */
+#define __NR_thread_join	74	/* join a peer; status receives its low 8 exit bits */
+#define __NR_exit_group	75	/* terminate all threads in this process */
 
 #define _syscall0(type,name) \
 type name(void) \
