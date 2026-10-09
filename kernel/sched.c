@@ -107,6 +107,8 @@ void schedule(void)
 	int i,next,c;
 	struct task_struct ** p;
 
+	reap_dead_tasks();
+
 /* check alarm, wake up any interruptible tasks that have got a signal */
 
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
@@ -140,6 +142,7 @@ void schedule(void)
 						(*p)->tcb.priority;
 	}
 	switch_to(next);
+	reap_dead_tasks();
 }
 
 /*
@@ -414,16 +417,7 @@ int sys_gettid(void)
 
 int sys_getppid(void)
 {
-	struct task_struct *parent = current->real_parent;
-	int depth;
-
-	/* Skip creators in our own process while clone uses task-based wait. */
-	for (depth = 0; parent && depth < NR_TASKS; depth++) {
-		if (parent->tgid != current->tgid)
-			return parent->tgid;
-		parent = parent->real_parent;
-	}
-	return 0;
+	return current->real_parent ? current->real_parent->tgid : 0;
 }
 
 int sys_getuid(void)
@@ -460,6 +454,8 @@ void sched_init(void)
 
 	if (sizeof(struct sigaction) != 16)
 		panic("Struct sigaction MUST be 16 bytes");
+	if (sizeof(struct thread_group) > PAGE_SIZE)
+		panic("Thread group exceeds one page");
 	set_tss_desc(gdt+FIRST_TSS_ENTRY,&(init_task.task.tss));
 	set_ldt_desc(gdt+FIRST_LDT_ENTRY,&(init_task.task.ldt));
 	p = gdt+2+FIRST_TSS_ENTRY;

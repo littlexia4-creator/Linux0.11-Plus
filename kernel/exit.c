@@ -10,11 +10,9 @@
 
 #include <linux/sched.h>
 #include <linux/kernel.h>
-#include <linux/tty.h>
 #include <asm/segment.h>
 
-int sys_pause(void);
-int sys_close(int fd);
+int sys_close(unsigned int fd);
 
 void release(struct task_struct * p)
 {
@@ -22,11 +20,18 @@ void release(struct task_struct * p)
 
 	if (!p)
 		return;
+	if (p == current)
+		panic("release of current task");
 	for (i=1 ; i<NR_TASKS ; i++)
 		if (task[i]==p) {
 			task[i]=NULL;
+			(gdt+(i<<1)+FIRST_TSS_ENTRY)->a = 0;
+			(gdt+(i<<1)+FIRST_TSS_ENTRY)->b = 0;
+			(gdt+(i<<1)+FIRST_LDT_ENTRY)->a = 0;
+			(gdt+(i<<1)+FIRST_LDT_ENTRY)->b = 0;
+			if (p->group && !--p->group->refs)
+				free_page((long)p->group);
 			free_page((long)p);
-			schedule();
 			return;
 		}
 	panic("trying to release non-existent task");
@@ -41,16 +46,6 @@ static inline int send_sig(long sig,struct task_struct * p,int priv)
 	else
 		return -EPERM;
 	return 0;
-}
-
-static void kill_session(void)
-{
-	struct task_struct **p = NR_TASKS + task;
-	
-	while (--p > &FIRST_TASK) {
-		if (*p && (*p)->session == current->session)
-			(*p)->signal |= 1<<(SIGHUP-1);
-	}
 }
 
 /*
@@ -82,31 +77,46 @@ int sys_kill(int pid,int sig)
 	return retval;
 }
 
-/* Detach every child before its parent task can be freed, including
- * children created by kernel threads. Kernel threads are reaped by join. */
+/* Move children to a live peer, or init when the parent process ends.
+ * Run before a task can be reaped; raw task pointers hold no reference. */
 void reparent_children(struct task_struct *parent)
 {
-	struct task_struct *p, *reaper = task[1];
+	struct task_struct *p, *reaper = task[0];
 	int i;
 
-	if (!reaper || reaper == parent)
-		reaper = task[0];
+	if (parent->group)
+		for (i=1; i<NR_TASKS; i++) {
+			p = task[i];
+			if (p && p != parent && p->group == parent->group &&
+			    p->tcb.state != TASK_ZOMBIE && p->tcb.state != TASK_DEAD) {
+				reaper = p;
+				break;
+			}
+		}
+	/* Find init by identity: a nonleader exec can move its task slot. */
+	if (reaper == task[0])
+		for (i=1; i<NR_TASKS; i++) {
+			p = task[i];
+			if (p && p != parent && p->tgid == 1 && p->group &&
+			    p->tcb.state != TASK_ZOMBIE && p->tcb.state != TASK_DEAD) {
+				reaper = p;
+				break;
+			}
+		}
 	for (i=1; i<NR_TASKS; i++) {
 		p = task[i];
 		if (!p || p->real_parent != parent)
 			continue;
 		p->real_parent = reaper;
-		if (!p->kthread.entry && p->tcb.state == TASK_ZOMBIE)
-			reaper->signal |= 1 << (SIGCHLD-1);
+		if (p->group && p == p->group->leader && !p->group->live &&
+		    parent->group != reaper->group)
+			notify_parent(p->group);
 	}
 }
 
 int do_exit(long code)
 {
 	int i;
-	free_page_tables(get_base(current->ldt[1]),get_limit(0x0f));
-	free_page_tables(get_base(current->ldt[2]),get_limit(0x17));
-	reparent_children(current);
 	for (i=0 ; i<NR_OPEN ; i++)
 		if (current->filp[i])
 			sys_close(i);
@@ -116,17 +126,9 @@ int do_exit(long code)
 	current->root=NULL;
 	iput(current->executable);
 	current->executable=NULL;
-	if (current->leader && current->tty >= 0)
-		tty_table[current->tty].pgrp = 0;
 	if (last_task_used_math == current)
 		last_task_used_math = NULL;
-	if (current->leader)
-		kill_session();
-	current->tcb.state = TASK_ZOMBIE;
-	current->exit_code = code;
-	if (current->real_parent)
-		current->real_parent->signal |= 1 << (SIGCHLD-1);
-	schedule();
+	finish_thread(code);
 	return (-1);	/* just to suppress warnings */
 }
 
@@ -135,60 +137,62 @@ int sys_exit(int error_code)
 	return do_exit((error_code&0xff)<<8);
 }
 
-/* clone() returns a TID; retain waitpid(TID) as its join/reap operation. */
-int sys_waitpid(pid_t pid,unsigned long * stat_addr, int options)
+/* Any peer can wait for a child process. Peer threads are never children. */
+int sys_waitpid(pid_t pid,unsigned long * status, int options)
 {
-	int flag, code;
-	struct task_struct ** p;
-
-	verify_area(stat_addr,4);
+	struct task_struct *p;
+	struct thread_group *g;
+	int i, found, code, result;
+	if (status) {
+		if (!user_range((unsigned long)status, 4))
+			return -EFAULT;
+		verify_area(status, 4);
+	}
 repeat:
-	flag=0;
-	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
-		if (!*p || *p == current || (*p)->kthread.entry)
+	found = 0;
+	for (i=1; i<NR_TASKS; i++) {
+		p = task[i];
+		if (!p || !(g=p->group) || p != g->leader ||
+		    !p->real_parent || p->real_parent->tgid != current->tgid)
 			continue;
-		if ((*p)->real_parent != current)
+		if ((pid>0 && g->tgid!=pid) ||
+		    (!pid && p->pgrp!=current->pgrp) ||
+		    (pid < -1 && p->pgrp != -pid))
 			continue;
-		if (pid>0) {
-			if ((*p)->tid != pid)
-				continue;
-		} else if (!pid) {
-			if ((*p)->pgrp != current->pgrp)
-				continue;
-		} else if (pid != -1) {
-			if ((*p)->pgrp != -pid)
-				continue;
+		if (!g->live) {
+			current->group->cutime += g->utime + g->cutime;
+			current->group->cstime += g->stime + g->cstime;
+			result = g->tgid;
+			code = g->exit_code;
+			reap_dead_tasks();
+			release(p);
+			if (status)
+				put_fs_long(code, status);
+			return result;
 		}
-		switch ((*p)->tcb.state) {
-			case TASK_STOPPED:
-				if (!(options & WUNTRACED))
-					continue;
-				put_fs_long(0x7f,stat_addr);
-				return (*p)->tid;
-			case TASK_ZOMBIE:
-				current->cutime += (*p)->utime;
-				current->cstime += (*p)->stime;
-				flag = (*p)->tid;
-				code = (*p)->exit_code;
-				release(*p);
-				put_fs_long(code,stat_addr);
-				return flag;
-			default:
-				flag=1;
-				continue;
+		if (p->tcb.state == TASK_STOPPED && (options & WUNTRACED)) {
+			code = 0x7f;
+			if (status)
+				put_fs_long(code, status);
+			return g->tgid;
 		}
+		found = 1;
 	}
-	if (flag) {
-		if (options & WNOHANG)
-			return 0;
-		current->tcb.state=TASK_SLEEP_INTERRUPTIBLE;
-		schedule();
-		if (!(current->signal &= ~(1<<(SIGCHLD-1))))
-			goto repeat;
-		else
-			return -EINTR;
+	if (!found)
+		return -ECHILD;
+	if (options & WNOHANG)
+		return 0;
+	code = current->signal & ~current->blocked;
+	if (current->sigaction[SIGCHLD-1].sa_handler == SIG_DFL ||
+	    current->sigaction[SIGCHLD-1].sa_handler == SIG_IGN) {
+		code &= ~(1 << (SIGCHLD-1));
+		current->signal &= ~(1 << (SIGCHLD-1));
 	}
-	return -ECHILD;
+	if (code)
+		return -EINTR;
+	current->tcb.state=TASK_SLEEP_INTERRUPTIBLE;
+	schedule();
+	goto repeat;
 }
 
 
