@@ -81,20 +81,7 @@ ok_load_setup:
 	mov	ax,INITSEG
 	mov	es,ax
 
-; Print some inane message
-
-	mov	ah,0x03		; read cursor pos
-	xor	bh,bh
-	int	0x10
-	
-	mov	cx,24
-	mov	bx,0x0007		; page 0, attribute 7 (normal)
-	mov	bp,msg1
-	mov	ax,0x1301		; write string, move cursor
-	int	0x10
-
-; ok, we've written the message, now
-; we want to load the system (at 0x10000)
+; ok, now we want to load the system (at 0x10000)
 
 	mov	ax,SYSSEG
 	mov	es,ax		; segment of 0x010000
@@ -233,12 +220,7 @@ kill_motor:
 sectors:
 	dw 0
 
-msg1:
-	db 13,10
-	db "dibingfa quick run"
-	db 13,10,13,10
-
-times 	508-($-$$)	db	0	
+times 	508-($-$$)	db	0
 root_dev:
 	dw ROOT_DEV
 boot_flag:
