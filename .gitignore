@@ -16,3 +16,4 @@ kernel/chr_drv/tty_ioctl.s
 boot/bootsect.bin
 boot/setup.bin
 *.stackdump
+root-files/

@@ -14,4 +14,8 @@ export PATH
 rm -f hdc-0.11.img.lock
 
 make || exit 1
+
+# overlay: stage root-files/* into the guest disk image
+./overlay.sh
+
 exec "/e/Program Files/Bochs-2.8/bochs.exe" -f bochsrc.bxrc -q
