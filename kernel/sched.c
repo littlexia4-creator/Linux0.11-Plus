@@ -193,6 +193,20 @@ void schedule(void)
 	local_irq_restore(flags);
 }
 
+/*
+ * Give up the remaining counter and schedule now, without blocking.
+ * Call only from process context with no non-sleepable locks held.
+ * The scheduler may select this task again if no other task is eligible.
+ */
+void yield(void)
+{
+	if (!irqs_enabled() || in_hardirq() ||
+	    current->tcb.state != TASK_RUNNING)
+		return;
+	current->tcb.counter = 0;
+	schedule();
+}
+
 int sys_pause(void)
 {
 	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
