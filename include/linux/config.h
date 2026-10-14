@@ -1,6 +1,12 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+/* Enable automatic preemption of unguarded kernel code at IRQ exit.
+ * Comment out CONFIG_PREEMPT to use explicit schedule()/cond_resched()
+ * points instead, then rebuild with run.sh. User-mode timer preemption
+ * remains enabled in either case. */
+#define CONFIG_PREEMPT
+
 /*
  * The root-device is no longer hard-coded. You can change the default
  * root-device by changing the line ROOT_DEV = XXX in boot/bootsect.s

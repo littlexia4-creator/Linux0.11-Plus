@@ -75,6 +75,9 @@ init/main.o $(LIBS): include/sys/syscall.h
 # Every task_struct user must see the same layout after a header change.
 $(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h include/linux/preempt.h
 
+# Re-enter the kernel build when its preemption model changes.
+kernel/kernel.o: include/linux/config.h
+
 KERNEL_FILE = tools/system.bin
 
 tools/system.bin : tools/system.exe 

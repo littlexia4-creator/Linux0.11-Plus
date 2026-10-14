@@ -210,6 +210,34 @@ void yield(void)
 	schedule();
 }
 
+/*
+ * Voluntary scheduling point. Unlike yield(), do not discard a live
+ * counter: schedule only after the time slice expires. Callers must be in process
+ * context and must hold no non-sleepable locks. Reject calls with interrupts
+ * disabled or in hard-IRQ context; legacy regions still allow voluntary
+ * scheduling.
+ * Return 1 if schedule() was called, even if it selected this task again.
+ */
+#ifdef CONFIG_PREEMPT
+int cond_resched(void)
+{
+	return 0;
+}
+#else
+int cond_resched(void)
+{
+	unsigned long flags;
+
+	__asm__ volatile ("pushfl; popl %0" : "=r" (flags) : : "memory");
+	if (!irqs_enabled_flags(flags) || in_hardirq() ||
+	    current->tcb.state != TASK_RUNNING ||
+	    !need_resched())
+		return 0;
+	schedule();
+	return 1;
+}
+#endif
+
 int sys_pause(void)
 {
 	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
