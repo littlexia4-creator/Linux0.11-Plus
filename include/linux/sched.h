@@ -33,6 +33,7 @@ extern void sched_init(void);
 extern void schedule(void);
 /* Process context only, at points where no non-sleepable locks are held. */
 extern void yield(void);
+extern int cond_resched(void);
 extern void trap_init(void);
 #ifndef PANIC
 volatile void panic(const char * str);
@@ -166,6 +167,12 @@ extern struct task_struct *last_task_used_math;
 extern struct task_struct *current;
 extern long volatile jiffies;
 extern long startup_time;
+
+/* Test for an exhausted time slice; do_timer() clamps counter to zero. */
+static inline int need_resched(void)
+{
+	return current->tcb.counter == 0;
+}
 
 #define CURRENT_TIME (startup_time+jiffies/HZ)
 
