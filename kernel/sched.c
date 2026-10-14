@@ -158,6 +158,25 @@ void yield(void)
 	schedule();
 }
 
+/*
+ * Voluntary scheduling point. Unlike yield(), do not discard a live
+ * counter: schedule only after the time slice expires. Callers must be in process
+ * context and must hold no non-sleepable locks. There is no general
+ * preempt-count/interrupt-depth tracking in this kernel yet.
+ * Return 1 if schedule() was called, even if it selected this task again.
+ */
+int cond_resched(void)
+{
+	unsigned long flags;
+
+	__asm__ volatile ("pushfl; popl %0" : "=r" (flags) : : "memory");
+	if (!(flags & 0x200) || current->tcb.state != TASK_RUNNING ||
+	    !need_resched())
+		return 0;
+	schedule();
+	return 1;
+}
+
 int sys_pause(void)
 {
 	current->tcb.state = TASK_INTERRUPTIBLE;
