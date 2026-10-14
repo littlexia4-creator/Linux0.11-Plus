@@ -35,6 +35,7 @@ extern void sched_init(void);
 extern void schedule(void);
 /* Process context only, at points where no non-sleepable locks are held. */
 extern void yield(void);
+extern int cond_resched(void);
 extern void trap_init(void);
 #ifndef PANIC
 volatile void panic(const char * str);

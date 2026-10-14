@@ -48,6 +48,7 @@ dep:
 	(cd blk_drv; make dep)
 
 ### Dependencies:
+preempt.o sched.o: ../include/linux/config.h
 preempt.o: ../include/linux/sched.h ../include/linux/preempt.h ../include/linux/kernel.h ../include/asm/system.h
 thread.o: ../include/linux/sched.h ../include/linux/tty.h
 futex.o: ../include/linux/sched.h ../include/linux/futex.h ../include/errno.h ../include/asm/segment.h

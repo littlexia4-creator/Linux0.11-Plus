@@ -207,9 +207,10 @@ _timer_interrupt:
 	pushl %eax
 	call _do_timer		# accounting and timer callbacks, never scheduling
 	addl $4,%esp
-	pushl EFLAGS(%esp)
+	pushl CS(%esp)		# second argument: interrupted code segment
+	pushl EFLAGS+4(%esp)	# first argument: EFLAGS after pushing CS
 	call _irq_exit
-	addl $4,%esp
+	addl $8,%esp
 	jmp ret_from_sys_call
 
 .align 2
@@ -272,9 +273,10 @@ _hd_interrupt:
 	movl $_unexpected_hd_interrupt,%edx
 1:	outb %al,$0x20
 	call *%edx		# "interesting" way of handling intr.
-	pushl 32(%esp)		# interrupted EFLAGS, after six saved registers
+	pushl 28(%esp)		# interrupted CS, after six saved registers
+	pushl 36(%esp)		# interrupted EFLAGS, adjusted for pushed CS
 	call _irq_exit
-	addl $4,%esp
+	addl $8,%esp
 	pop %fs
 	pop %es
 	pop %ds
@@ -303,9 +305,10 @@ _floppy_interrupt:
 	jne 1f
 	movl $_unexpected_floppy_interrupt,%eax
 1:	call *%eax		# "interesting" way of handling intr.
-	pushl 32(%esp)
+	pushl 28(%esp)		# interrupted CS, after six saved registers
+	pushl 36(%esp)		# interrupted EFLAGS, adjusted for pushed CS
 	call _irq_exit
-	addl $4,%esp
+	addl $8,%esp
 	pop %fs
 	pop %es
 	pop %ds
@@ -327,9 +330,10 @@ _parallel_interrupt:
 	call _irq_enter
 	movb $0x20,%al
 	outb %al,$0x20
-	pushl 28(%esp)		# interrupted EFLAGS, after five saved registers
+	pushl 24(%esp)		# interrupted CS, after five saved registers
+	pushl 32(%esp)		# interrupted EFLAGS, adjusted for pushed CS
 	call _irq_exit
-	addl $4,%esp
+	addl $8,%esp
 	pop %es
 	pop %ds
 	popl %edx
@@ -352,7 +356,8 @@ _coprocessor_interrupt:
 	cld
 	call _irq_enter
 	call _math_error
-	pushl EFLAGS(%esp)
+	pushl CS(%esp)
+	pushl EFLAGS+4(%esp)
 	call _irq_exit
-	addl $4,%esp
+	addl $8,%esp
 	jmp ret_from_sys_call
