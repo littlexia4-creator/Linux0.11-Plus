@@ -31,6 +31,8 @@ extern int free_page_tables(unsigned long from, unsigned long size);
 
 extern void sched_init(void);
 extern void schedule(void);
+/* Process context only, at points where no non-sleepable locks are held. */
+extern void yield(void);
 extern void trap_init(void);
 #ifndef PANIC
 volatile void panic(const char * str);

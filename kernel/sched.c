@@ -141,6 +141,22 @@ void schedule(void)
 	switch_to(next);
 }
 
+/*
+ * Give up the remaining counter and schedule now, without blocking.
+ * Call only from process context with no non-sleepable locks held.
+ * The scheduler may select this task again if no other task is eligible.
+ */
+void yield(void)
+{
+	unsigned long flags;
+
+	__asm__ volatile ("pushfl; popl %0" : "=r" (flags) : : "memory");
+	if (!(flags & 0x200) || current->tcb.state != TASK_RUNNING)
+		return;
+	current->tcb.counter = 0;
+	schedule();
+}
+
 int sys_pause(void)
 {
 	current->tcb.state = TASK_INTERRUPTIBLE;
