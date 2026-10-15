@@ -158,6 +158,11 @@ extern void sleep_on(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);
 extern void wake_up(struct task_struct ** p);
 
+/* shared task creation (kernel/task.c) */
+extern int find_empty_process(void);
+extern struct task_struct *alloc_task(int nr, const struct task_struct *template);
+extern void start_task(int nr, struct task_struct *p);
+
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall
