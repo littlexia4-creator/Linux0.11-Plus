@@ -37,7 +37,8 @@ return dest;
 
 static inline char * strncpy(char * dest,const char *src,int count)
 {
-__asm__("cld\n"
+char * result = dest;
+__asm__ __volatile__("cld\n"
 	"1:\tdecl %2\n\t"
 	"js 2f\n\t"
 	"lodsb\n\t"
@@ -47,8 +48,10 @@ __asm__("cld\n"
 	"rep\n\t"
 	"stosb\n"
 	"2:"
-	::"S" (src),"D" (dest),"c" (count));
-return dest;
+	:"+S" (src),"+D" (dest),"+c" (count)
+	:
+	:"eax","memory","cc");
+return result;
 }
 
 extern inline char * strcat(char * dest,const char * src)
