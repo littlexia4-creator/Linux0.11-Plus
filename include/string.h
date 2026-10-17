@@ -35,6 +35,14 @@ __asm__("cld\n"
 return dest;
 }
 
+/*
+ * This x86 optimization keeps pointers and count in registers, uses
+ * LODSB/STOSB to copy bytes, and REP STOSB to zero-pad the destination.
+ * Inlining can avoid call/return overhead while keeping a normal C interface.
+ * Plain C is also valid; performance depends on the compiler and CPU.
+ * Operands and clobbers must describe all register and memory effects so
+ * GCC can safely optimize the surrounding code.
+ */
 static inline char * strncpy(char * dest,const char *src,int count)
 {
 char * result = dest;
