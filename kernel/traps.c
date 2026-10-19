@@ -77,7 +77,8 @@ static void die(char * str,long esp_ptr,long nr)
 		printk("\n");
 	}
 	str(i);
-	printk("TGID: %d, process nr: %d\n\r",current->tgid,0xffff & i);
+	printk("PID: %d, TID: %d, process nr: %d\n\r",
+		current->tgid,current->tid,0xffff & i);
 	for(i=0;i<10;i++)
 		printk("%02x ",0xff & get_seg_byte(esp[1],(i+(char *)esp[0])));
 	printk("\n\r");

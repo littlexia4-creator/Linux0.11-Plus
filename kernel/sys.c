@@ -174,6 +174,7 @@ int sys_brk(unsigned long end_data_seg)
 }
 
 /*
+ * Job-control operations retain their existing per-task (TID) targets.
  * This needs some heave checking ...
  * I just haven't get the stomach for it. I also don't fully
  * understand sessions/pgrp etc. Let somebody who does explain it.
@@ -183,11 +184,11 @@ int sys_setpgid(int pid, int pgid)
 	int i;
 
 	if (!pid)
-		pid = current->tgid;
+		pid = current->tid;
 	if (!pgid)
-		pgid = current->tgid;
+		pgid = current->tid;
 	for (i=0 ; i<NR_TASKS ; i++)
-		if (task[i] && task[i]->tgid==pid) {
+		if (task[i] && task[i]->tid==pid) {
 			if (task[i]->leader)
 				return -EPERM;
 			if (task[i]->session != current->session)
@@ -208,7 +209,7 @@ int sys_setsid(void)
 	if (current->leader && !suser())
 		return -EPERM;
 	current->leader = 1;
-	current->session = current->pgrp = current->tgid;
+	current->session = current->pgrp = current->tid;
 	current->tty = -1;
 	return current->pgrp;
 }
