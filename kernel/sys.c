@@ -183,11 +183,11 @@ int sys_setpgid(int pid, int pgid)
 	int i;
 
 	if (!pid)
-		pid = current->pid;
+		pid = current->tgid;
 	if (!pgid)
-		pgid = current->pid;
+		pgid = current->tgid;
 	for (i=0 ; i<NR_TASKS ; i++)
-		if (task[i] && task[i]->pid==pid) {
+		if (task[i] && task[i]->tgid==pid) {
 			if (task[i]->leader)
 				return -EPERM;
 			if (task[i]->session != current->session)
@@ -208,7 +208,7 @@ int sys_setsid(void)
 	if (current->leader && !suser())
 		return -EPERM;
 	current->leader = 1;
-	current->session = current->pgrp = current->pid;
+	current->session = current->pgrp = current->tgid;
 	current->tty = -1;
 	return current->pgrp;
 }
