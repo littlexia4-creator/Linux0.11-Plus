@@ -1,3 +1,4 @@
 /*
 !/.gitignore
 !/futex_wait.h
+!/strncpy_test.c
