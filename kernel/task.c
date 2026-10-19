@@ -19,10 +19,10 @@
 
 extern void write_verify(unsigned long address);
 
-long last_tgid=0;
+long last_tid=0;
 
 /*
- * Allocate a task after find_empty_process() selects nr/tgid.
+ * Allocate a task after find_empty_process() selects nr/tid.
  * User tasks inherit current; kernel threads use task[0] as their template.
  * Only task_struct is copied, not the supervisor stack in the same page.
  * Reserve the slot before further setup, but keep the task unrunnable
@@ -38,8 +38,9 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 		return NULL;
 	*p = *template;
 	p->tcb.state = TASK_UNINTERRUPTIBLE;
-	p->tgid = last_tgid;
-	p->father = current->tgid;
+	p->tid = last_tid;
+	p->tgid = p->tid;	/* fork and kernel threads start a new process */
+	p->father = current->tid;
 	p->tcb.counter = p->tcb.priority;
 	p->signal = 0;
 	p->alarm = 0;
@@ -161,9 +162,12 @@ int find_empty_process(void)
 	int i;
 
 	repeat:
-		if ((++last_tgid)<0) last_tgid=1;
+		if (last_tid >= 0x7fffffff) last_tid=1;
+		else ++last_tid;
 		for(i=0 ; i<NR_TASKS ; i++)
-			if (task[i] && task[i]->tgid == last_tgid) goto repeat;
+			/* Reserve the TGID even after its leader is reaped. */
+			if (task[i] && (task[i]->tid == last_tid ||
+			    task[i]->tgid == last_tid)) goto repeat;
 	for(i=1 ; i<NR_TASKS ; i++)
 		if (!task[i])
 			return i;
