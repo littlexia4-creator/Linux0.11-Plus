@@ -79,7 +79,7 @@
 /* 74 is reserved for the removed user-thread join syscall. */
 #define __NR_exit_group	75	/* terminate all threads in this process */
 #define __NR_futex	76	/* minimal process-local wait/wake */
-/* 77 is reserved for the strncpy regression-test syscall. */
+#define __NR_strncpy_test	77	/* run the in-kernel strncpy regression test */
 #define __NR_sigprocmask	78	/* atomically update the calling thread's mask */
 
 #define SYS_setup	__NR_setup
@@ -158,6 +158,7 @@
 #define SYS_clone	__NR_clone
 #define SYS_exit_group	__NR_exit_group
 #define SYS_futex	__NR_futex
+#define SYS_strncpy_test	__NR_strncpy_test
 #define SYS_sigprocmask	__NR_sigprocmask
 
 /* Also declare it here for the guest's original installed <unistd.h>. */
