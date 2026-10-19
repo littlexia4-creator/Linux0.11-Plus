@@ -24,7 +24,7 @@ CPP	=gcc -E -nostdinc -I../include
 	$(CC) $(CFLAGS) \
 	-c -o $*.o $<
 
-OBJS  = sched.o system_call.o traps.o asm.o task.o thread.o kthread.o kthread_demo.o \
+OBJS  = sched.o system_call.o traps.o asm.o task.o thread.o kthread.o strncpy_test.o kthread_demo.o \
 	panic.o printk.o vsprintf.o sys.o exit.o \
 	signal.o mktime.o
 
@@ -49,6 +49,7 @@ dep:
 
 ### Dependencies:
 thread.o: ../include/linux/sched.h ../include/linux/tty.h
+strncpy_test.o: ../include/string.h ../include/linux/kernel.h ../include/errno.h
 kthread_demo.o: ../include/linux/sched.h
 kthread.o : ../include/linux/sched.h
 exit.s exit.o: exit.c ../include/errno.h ../include/signal.h \
