@@ -134,6 +134,7 @@
 #define __NR_kthread_demo	74	/* run the kernel-thread demo */
 #define __NR_exit_group	75	/* terminate all threads in this process */
 #define __NR_futex	76	/* minimal process-local wait/wake */
+#define __NR_strncpy_test	77	/* run the in-kernel strncpy regression test */
 
 #define _syscall0(type,name) \
 type name(void) \
