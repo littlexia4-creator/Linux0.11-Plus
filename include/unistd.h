@@ -129,6 +129,7 @@
 #define __NR_ssetmask	69
 #define __NR_setreuid	70
 #define __NR_setregid	71
+#define __NR_gettid	72	/* calling task's thread ID */
 
 #define _syscall0(type,name) \
 type name(void) \
@@ -209,6 +210,7 @@ volatile void _exit(int status);
 int fcntl(int fildes, int cmd, ...);
 int fork(void);
 int getpid(void);
+int gettid(void);
 int getuid(void);
 int geteuid(void);
 int getgid(void);

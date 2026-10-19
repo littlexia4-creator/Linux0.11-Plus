@@ -350,6 +350,11 @@ int sys_getpid(void)
 	return current->tgid;
 }
 
+int sys_gettid(void)
+{
+	return current->tgid;
+}
+
 int sys_getppid(void)
 {
 	return current->father;
