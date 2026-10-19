@@ -27,7 +27,7 @@ void show_task(int nr,struct task_struct * p)
 {
 	int i,j = 4096-sizeof(struct task_struct);
 
-	printk("%d: pid=%d, state=%d, ",nr,p->pid,p->tcb.state);
+	printk("%d: tgid=%d, state=%d, ",nr,p->tgid,p->tcb.state);
 	i=0;
 	while (i<j && !((char *)(p+1))[i])
 		i++;
@@ -347,7 +347,12 @@ int sys_alarm(long seconds)
 
 int sys_getpid(void)
 {
-	return current->pid;
+	return current->tgid;
+}
+
+int sys_gettid(void)
+{
+	return current->tgid;
 }
 
 int sys_getppid(void)

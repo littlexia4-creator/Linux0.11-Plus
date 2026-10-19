@@ -63,11 +63,11 @@ int sys_kill(int pid,int sig)
 	int err, retval = 0;
 
 	if (!pid) while (--p > &FIRST_TASK) {
-		if (*p && (*p)->pgrp == current->pid) 
+		if (*p && (*p)->pgrp == current->tgid)
 			if ((err=send_sig(sig,*p,1)))
 				retval = err;
 	} else if (pid>0) while (--p > &FIRST_TASK) {
-		if (*p && (*p)->pid == pid) 
+		if (*p && (*p)->tgid == pid)
 			if ((err=send_sig(sig,*p,0)))
 				retval = err;
 	} else if (pid == -1) while (--p > &FIRST_TASK) {
@@ -88,7 +88,7 @@ static void tell_father(int pid)
 		for (i=0;i<NR_TASKS;i++) {
 			if (!task[i])
 				continue;
-			if (task[i]->pid != pid)
+			if (task[i]->tgid != pid)
 				continue;
 			task[i]->signal |= (1<<(SIGCHLD-1));
 			return;
@@ -105,7 +105,7 @@ int do_exit(long code)
 	free_page_tables(get_base(current->ldt[1]),get_limit(0x0f));
 	free_page_tables(get_base(current->ldt[2]),get_limit(0x17));
 	for (i=0 ; i<NR_TASKS ; i++)
-		if (task[i] && task[i]->father == current->pid) {
+		if (task[i] && task[i]->father == current->tgid) {
 			task[i]->father = 1;
 			if (task[i]->tcb.state == TASK_ZOMBIE)
 				/* assumption task[1] is always init */
@@ -149,10 +149,10 @@ repeat:
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
 		if (!*p || *p == current)
 			continue;
-		if ((*p)->father != current->pid)
+		if ((*p)->father != current->tgid)
 			continue;
 		if (pid>0) {
-			if ((*p)->pid != pid)
+			if ((*p)->tgid != pid)
 				continue;
 		} else if (!pid) {
 			if ((*p)->pgrp != current->pgrp)
@@ -166,11 +166,11 @@ repeat:
 				if (!(options & WUNTRACED))
 					continue;
 				put_fs_long(0x7f,stat_addr);
-				return (*p)->pid;
+				return (*p)->tgid;
 			case TASK_ZOMBIE:
 				current->cutime += (*p)->utime;
 				current->cstime += (*p)->stime;
-				flag = (*p)->pid;
+				flag = (*p)->tgid;
 				code = (*p)->exit_code;
 				release(*p);
 				put_fs_long(code,stat_addr);
