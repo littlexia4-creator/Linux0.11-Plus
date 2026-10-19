@@ -69,6 +69,9 @@ LIBS	=lib/lib.a
 
 all:	Boot.img
 
+# Every task_struct user must see the same layout after a header change.
+$(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h
+
 KERNEL_FILE = tools/system.bin
 
 tools/system.bin : tools/system.exe 

@@ -83,7 +83,7 @@ int kernel_thread(long (*fn)(void *), void *arg, const char *name)
 {
 	struct task_struct *p = do_create_kthread(fn, arg, name);
 
-	return p ? p->tgid : -EAGAIN;
+	return p ? p->tid : -EAGAIN;
 }
 
 void kthread_exit(long code)

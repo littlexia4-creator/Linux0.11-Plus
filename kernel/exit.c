@@ -54,6 +54,8 @@ static void kill_session(void)
 }
 
 /*
+ * Positive IDs still select one TID in this task-based signal API.
+ * Process-wide signal delivery is not implemented by the identity split.
  * XXX need to check permissions needed to send signals to process
  * groups, etc. etc.  kill() permissions semantics are tricky!
  */
@@ -63,11 +65,11 @@ int sys_kill(int pid,int sig)
 	int err, retval = 0;
 
 	if (!pid) while (--p > &FIRST_TASK) {
-		if (*p && (*p)->pgrp == current->tgid)
+		if (*p && (*p)->pgrp == current->tid)
 			if ((err=send_sig(sig,*p,1)))
 				retval = err;
 	} else if (pid>0) while (--p > &FIRST_TASK) {
-		if (*p && (*p)->tgid == pid)
+		if (*p && (*p)->tid == pid)
 			if ((err=send_sig(sig,*p,0)))
 				retval = err;
 	} else if (pid == -1) while (--p > &FIRST_TASK) {
@@ -88,7 +90,7 @@ static void tell_father(int pid)
 		for (i=0;i<NR_TASKS;i++) {
 			if (!task[i])
 				continue;
-			if (task[i]->tgid != pid)
+			if (task[i]->tid != pid)
 				continue;
 			task[i]->signal |= (1<<(SIGCHLD-1));
 			return;
@@ -105,7 +107,7 @@ int do_exit(long code)
 	free_page_tables(get_base(current->ldt[1]),get_limit(0x0f));
 	free_page_tables(get_base(current->ldt[2]),get_limit(0x17));
 	for (i=0 ; i<NR_TASKS ; i++)
-		if (task[i] && task[i]->father == current->tgid) {
+		if (task[i] && task[i]->father == current->tid) {
 			task[i]->father = 1;
 			if (task[i]->tcb.state == TASK_ZOMBIE)
 				/* assumption task[1] is always init */
@@ -138,6 +140,7 @@ int sys_exit(int error_code)
 	return do_exit((error_code&0xff)<<8);
 }
 
+/* clone() returns a TID; retain waitpid(TID) as its join/reap operation. */
 int sys_waitpid(pid_t pid,unsigned long * stat_addr, int options)
 {
 	int flag, code;
@@ -149,10 +152,10 @@ repeat:
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
 		if (!*p || *p == current)
 			continue;
-		if ((*p)->father != current->tgid)
+		if ((*p)->father != current->tid)
 			continue;
 		if (pid>0) {
-			if ((*p)->tgid != pid)
+			if ((*p)->tid != pid)
 				continue;
 		} else if (!pid) {
 			if ((*p)->pgrp != current->pgrp)
@@ -166,11 +169,11 @@ repeat:
 				if (!(options & WUNTRACED))
 					continue;
 				put_fs_long(0x7f,stat_addr);
-				return (*p)->tgid;
+				return (*p)->tid;
 			case TASK_ZOMBIE:
 				current->cutime += (*p)->utime;
 				current->cstime += (*p)->stime;
-				flag = (*p)->tgid;
+				flag = (*p)->tid;
 				code = (*p)->exit_code;
 				release(*p);
 				put_fs_long(code,stat_addr);

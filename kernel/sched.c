@@ -27,7 +27,8 @@ void show_task(int nr,struct task_struct * p)
 {
 	int i,j = 4096-sizeof(struct task_struct);
 
-	printk("%d: tgid=%d, state=%d, ",nr,p->tgid,p->tcb.state);
+	printk("%d: pid=%d, tid=%d, state=%d, ",
+		nr,p->tgid,p->tid,p->tcb.state);
 	i=0;
 	while (i<j && !((char *)(p+1))[i])
 		i++;
@@ -352,12 +353,27 @@ int sys_getpid(void)
 
 int sys_gettid(void)
 {
-	return current->tgid;
+	return current->tid;
 }
 
 int sys_getppid(void)
 {
-	return current->father;
+	long parent_tid = current->father;
+	int i, depth;
+
+	/* Clone's creator link stays task-based for wait/exit. Skip creators
+	 * in our own process to report the parent process's PID. */
+	for (depth = 0; depth < NR_TASKS; depth++) {
+		for (i = 0; i < NR_TASKS; i++)
+			if (task[i] && task[i]->tid == parent_tid)
+				break;
+		if (i == NR_TASKS)
+			return 0;
+		if (task[i]->tgid != current->tgid)
+			return task[i]->tgid;
+		parent_tid = task[i]->father;
+	}
+	return 0;
 }
 
 int sys_getuid(void)
