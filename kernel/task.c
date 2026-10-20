@@ -26,7 +26,7 @@ long last_tid=0;
  * User tasks inherit current; kernel threads use task[0] as their template.
  * Only task_struct is copied, not the supervisor stack in the same page.
  * Reserve the slot before further setup, but keep the task unrunnable
- * until start_task(). On failure the caller must clear task[nr] and
+ * until explicitly woken. On failure the caller must clear task[nr] and
  * free the page.
  */
 struct task_struct *alloc_task(int nr, const struct task_struct *template)
@@ -56,12 +56,18 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 	return p;
 }
 
-/* Call only after registers, memory and resource ownership are ready. */
-void start_task(int nr, struct task_struct *p)
+/* Install descriptors while the fully initialized task remains asleep. */
+void setup_task(int nr, struct task_struct *p)
 {
 	set_tss_desc(gdt+(nr<<1)+FIRST_TSS_ENTRY,&(p->tss));
 	set_ldt_desc(gdt+(nr<<1)+FIRST_LDT_ENTRY,&(p->ldt));
-	p->tcb.state = TASK_RUNNING;	/* do this last, just in case */
+}
+
+/* Fork makes the child runnable as soon as setup is complete. */
+void start_task(int nr, struct task_struct *p)
+{
+	setup_task(nr, p);
+	wake_up_process(p);	/* do this last, just in case */
 }
 
 void verify_area(void * addr,int size)
