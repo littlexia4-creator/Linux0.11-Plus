@@ -171,15 +171,18 @@ extern void add_timer(long jiffies, void (*fn)(void));
 extern void sleep_on(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);
 extern void wake_up(struct task_struct ** p);
+extern int wake_up_process(struct task_struct *p);
 
 /* shared task creation (kernel/task.c) */
 extern int find_empty_process(void);
 extern struct task_struct *alloc_task(int nr, const struct task_struct *template);
+extern void setup_task(int nr, struct task_struct *p);
 extern void start_task(int nr, struct task_struct *p);
 extern void reparent_children(struct task_struct *parent);
 
 /* kernel threads (kernel/kthread.c) */
-extern int  kernel_thread(long (*fn)(void *), void *arg, const char *name);
+/* kthread_run() creates and wakes a task; returns NULL on failure. */
+extern struct task_struct *kthread_run(long (*fn)(void *), void *arg, const char *name);
 extern void kthread_exit(long code) __attribute__((noreturn));
 extern int  kthread_join(struct task_struct *t);
 

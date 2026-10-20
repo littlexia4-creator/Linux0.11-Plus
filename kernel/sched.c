@@ -186,6 +186,27 @@ repeat:	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
 		tmp->tcb.state=0;
 }
 
+/*
+ * Make a sleeping task runnable without scheduling here. Return 1 if woken,
+ * 0 otherwise. The caller must hold a valid, fully initialized task pointer.
+ * On this uniprocessor, disabling interrupts protects the state transition;
+ * restore the caller's flags so this also works with interrupts disabled.
+ */
+int wake_up_process(struct task_struct *p)
+{
+	unsigned long flags;
+	int woke = 0;
+
+	local_irq_save(flags);
+	if (p->tcb.state == TASK_SLEEP_INTERRUPTIBLE ||
+	    p->tcb.state == TASK_SLEEP_UNINTERRUPTIBLE) {
+		p->tcb.state = TASK_RUNNING;
+		woke = 1;
+	}
+	local_irq_restore(flags);
+	return woke;
+}
+
 void wake_up(struct task_struct **p)
 {
 	if (p && *p) {
