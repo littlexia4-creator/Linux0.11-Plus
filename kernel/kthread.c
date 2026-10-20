@@ -43,6 +43,7 @@ static void kthread(void)
 	kthread_exit(ret);
 }
 
+/* Create asleep; the caller must wake the task before joining it. */
 static struct task_struct *do_create_kthread(long (*fn)(void *), void *arg,
 					  const char *name)
 {
@@ -74,7 +75,17 @@ static struct task_struct *do_create_kthread(long (*fn)(void *), void *arg,
 	 * FS selector, so they do not load these absent user descriptors. */
 	p->ldt[1].a = 0; p->ldt[1].b = 0;
 	p->ldt[2].a = 0; p->ldt[2].b = 0;
-	start_task(nr, p);
+	setup_task(nr, p);
+	return p;
+}
+
+struct task_struct *kthread_run(long (*fn)(void *), void *arg,
+			       const char *name)
+{
+	struct task_struct *p = do_create_kthread(fn, arg, name);
+
+	if (p)
+		wake_up_task(p);
 	return p;
 }
 
