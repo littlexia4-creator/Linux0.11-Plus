@@ -20,6 +20,7 @@ done || exit 1
 	p="${f#./}"
 	# Minix V1 directory entries allow at most 14 characters per name.
 	case "$p" in
+		build_clone_test.sh) destination="build_clone.sh" ;;
 		lib/libc_syscalls.a) destination="lib/libcsyscalls.a" ;;
 		*) destination="$p" ;;
 	esac
