@@ -3,6 +3,8 @@
 !/thr.c
 !/futex_wait.h
 !/build_thr.sh
+!/build_clone_test.sh
 !/strncpy_test.c
+!/clone_test.c
 !/sigmask_test.c
 !/pipe_test.c
