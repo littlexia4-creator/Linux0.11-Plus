@@ -21,7 +21,9 @@ root-files/*
 !root-files/kthread_demo.c
 !root-files/thr.c
 !root-files/build_thr.sh
+!root-files/build_clone_test.sh
 !root-files/strncpy_test.c
+!root-files/clone_test.c
 !root-files/sigmask_test.c
 !root-files/pipe_test.c
 *.md
