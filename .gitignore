@@ -21,3 +21,4 @@ root-files/*
 !root-files/thr.c
 !root-files/build_thr.sh
 !root-files/strncpy_test.c
+!root-files/clone_test.c
