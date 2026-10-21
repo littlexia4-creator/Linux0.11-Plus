@@ -79,13 +79,17 @@ int sys_sigaction(int signum, const struct sigaction * action,
 	return 0;
 }
 
-void do_signal(long signr,long eax, long ebx, long ecx, long edx,
-	long fs, long es, long ds,
-	long eip, long cs, long eflags,
-	unsigned long * esp, long ss)
+/* Matches the saved-register/iret layout in system_call.s. Writing through
+ * this pointer is observable; assignments to by-value C arguments are not. */
+struct user_return_frame {
+	unsigned long eax, ebx, ecx, edx, fs, es, ds;
+	unsigned long eip, cs, eflags, esp, ss;
+};
+
+void do_signal(long signr, struct user_return_frame *regs)
 {
 	unsigned long sa_handler;
-	long old_eip=eip;
+	long old_eip=regs->eip;
 	struct sigaction * sa = current->sigaction + signr - 1;
 	int longs;
 	unsigned long * tmp_esp;
@@ -101,19 +105,19 @@ void do_signal(long signr,long eax, long ebx, long ecx, long edx,
 	}
 	if (sa->sa_flags & SA_ONESHOT)
 		sa->sa_handler = NULL;
-	*(&eip) = sa_handler;
 	longs = (sa->sa_flags & SA_NOMASK)?7:8;
-	*(&esp) -= longs;
-	verify_area(esp,longs*4);
-	tmp_esp=esp;
+	verify_area((void *)(regs->esp-longs*4),longs*4);
+	regs->eip = sa_handler;
+	regs->esp -= longs*4;
+	tmp_esp=(unsigned long *)regs->esp;
 	put_fs_long((long) sa->sa_restorer,tmp_esp++);
 	put_fs_long(signr,tmp_esp++);
 	if (!(sa->sa_flags & SA_NOMASK))
 		put_fs_long(current->blocked,tmp_esp++);
-	put_fs_long(eax,tmp_esp++);
-	put_fs_long(ecx,tmp_esp++);
-	put_fs_long(edx,tmp_esp++);
-	put_fs_long(eflags,tmp_esp++);
+	put_fs_long(regs->eax,tmp_esp++);
+	put_fs_long(regs->ecx,tmp_esp++);
+	put_fs_long(regs->edx,tmp_esp++);
+	put_fs_long(regs->eflags,tmp_esp++);
 	put_fs_long(old_eip,tmp_esp++);
 	current->blocked |= sa->sa_mask;
 }
