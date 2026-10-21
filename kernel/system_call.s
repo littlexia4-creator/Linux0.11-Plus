@@ -119,9 +119,11 @@ ret_from_sys_call:
 	btrl %ecx,%ebx
 	movl %ebx,signal(%eax)
 	incl %ecx
+	movl %esp,%edx		# pointer to the saved registers/iret frame
+	pushl %edx
 	pushl %ecx
 	call _do_signal
-	popl %eax
+	addl $8,%esp
 3:	popl %eax
 	popl %ebx
 	popl %ecx
