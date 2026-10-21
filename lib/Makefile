@@ -25,7 +25,7 @@ CPP	=gcc -E -nostdinc -I../include
 	-c -o $*.o $<
 
 OBJS  = ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o \
-	execve.o wait.o string.o malloc.o clone.o gettid.o
+	execve.o wait.o string.o malloc.o clone.o gettid.o thread_join.o exit_group.o
 
 lib.a: $(OBJS)
 	$(AR) rcs lib.a $(OBJS)
@@ -42,6 +42,7 @@ dep:
 	cp tmp_make Makefile
 
 ### Dependencies:
+thread_join.o exit_group.o clone.o: ../include/unistd.h
 gettid.o: ../include/unistd.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
   ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \

@@ -185,6 +185,7 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
  *    first frame in already-shared memory through the parent's fs:
  *      [esp]   = 0    invalid return address: the entry must call sys_exit
  *      [esp+4] = arg  cdecl argument for fn(arg)
+ *    lib/clone.c supplies an entry wrapper that exits after the callback.
  */
 int do_clone(long ebp,long edi,long esi,long gs,long none,
 		long ebx,long ecx,long edx,

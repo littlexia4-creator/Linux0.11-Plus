@@ -214,6 +214,11 @@ int fcntl(int fildes, int cmd, ...);
 int fork(void);
 int getpid(void);
 int gettid(void);
+/* Fixed policy: share VM, signal actions and thread group; no flags argument. */
+int clone(int (*fn)(void *), void *arg, void *stack_top);
+/* status receives the low eight exit-status bits, not a waitpid status word. */
+int thread_join(int tid, int *status);
+volatile void exit_group(int status);
 int getuid(void);
 int geteuid(void);
 int getgid(void);
