@@ -108,7 +108,7 @@ struct task_struct {
 	unsigned long start_code,end_code,end_data,brk,start_stack;
 	long tid;		/* unique task/thread ID */
 	long tgid;		/* process ID; shared by cloned threads */
-	long father;		/* creator's TID; used by exit/wait */
+	struct task_struct *real_parent; /* parent task; initially the creator */
 	long pgrp,session,leader;
 	unsigned short uid,euid,suid;
 	unsigned short gid,egid,sgid;
@@ -139,7 +139,7 @@ struct task_struct {
 /* tcb */	{ {0,15,15}, \
 /* signals */	0,{{},},0, \
 /* ec,brk... */	0,0,0,0,0,0, \
-/* task IDs */	0,0,-1,0,0,0, \
+/* task IDs */	0,0,NULL,0,0,0, \
 /* uid etc */	0,0,0,0,0,0, \
 /* alarm */	0,0,0,0,0,0, \
 /* math */	0, \
@@ -176,6 +176,7 @@ extern void wake_up(struct task_struct ** p);
 extern int find_empty_process(void);
 extern struct task_struct *alloc_task(int nr, const struct task_struct *template);
 extern void start_task(int nr, struct task_struct *p);
+extern void reparent_children(struct task_struct *parent);
 
 /* kernel threads (kernel/kthread.c) */
 extern struct task_struct *kthread_create(long (*fn)(void *), void *arg, const char *name);

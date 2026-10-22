@@ -40,7 +40,7 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 	p->tcb.state = TASK_UNINTERRUPTIBLE;
 	p->tid = last_tid;
 	p->tgid = p->tid;	/* fork and kernel threads start a new process */
-	p->father = current->tid;
+	p->real_parent = current;
 	p->tcb.counter = p->tcb.priority;
 	p->signal = 0;
 	p->alarm = 0;
