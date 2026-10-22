@@ -80,6 +80,7 @@ static struct task_struct *do_create_kthread(long (*fn)(void *), void *arg,
 
 void kthread_exit(long code)
 {
+	reparent_children(current);
 	current->exit_code = code;
 	current->tcb.state = TASK_ZOMBIE;
 	wake_up(&current->kthread.wait_head);
