@@ -116,7 +116,7 @@ kernel/chr_drv/chr_drv.a:$(CHR_DRV_SRC)
 	(cd kernel/chr_drv ; make)
 #	(cd kernel/chr_drv & make)
 	
-kernel/kernel.o:$(KERNEL_SRC)
+kernel/kernel.o:$(KERNEL_SRC) include/sched.h
 	(cd kernel; make)
 # 	(cd kernel & make)
 
@@ -128,7 +128,7 @@ fs/fs.o:$(FS_SRC)
 	(cd fs; make)
 #	(cd fs & make)
 	
-lib/lib.a:$(LIB_SRC)
+lib/lib.a:$(LIB_SRC) lib/Makefile include/sched.h
 	make -C ./lib
 #	(cd lib & make)
 

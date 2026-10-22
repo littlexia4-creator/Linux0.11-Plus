@@ -43,6 +43,7 @@ dep:
 
 ### Dependencies:
 thread_join.o exit_group.o clone.o: ../include/unistd.h
+clone.o: ../include/sched.h
 gettid.o: ../include/unistd.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
   ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \

@@ -213,9 +213,9 @@ _sys_fork:
 1:	ret
 
 /*
- * clone(fn, arg, stack_top): ebx=fn, ecx=arg, edx=stack_top are already
- * pushed by the generic syscall path and flow into do_clone's frame
- * parameters exactly like copy_process's ebx/ecx/edx.
+ * Raw clone(fn, arg, stack_top, flags): ebx=fn, ecx=arg, edx=stack_top
+ * are pushed by the generic syscall path. esi=flags is saved below;
+ * all four flow into do_clone's frame parameters.
  */
 .align 2
 _sys_clone:

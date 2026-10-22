@@ -11,6 +11,7 @@
 #define __LIBRARY__
 #include <unistd.h>
 #include <errno.h>
+#include <sched.h>
 
 struct clone_args {
 	int (*fn)(void *);
@@ -24,12 +25,14 @@ static void clone_start(void *arg)
 	_exit(args->fn(args->arg));
 }
 
-int clone(int (*fn)(void *), void *arg, void *stack_top)
+int clone(int (*fn)(void *), void *stack_top, int flags, void *arg)
 {
 	struct clone_args *args;
 	register int res;
 
-	if (!fn || !stack_top) {
+	/* Reject unsupported policies before writing the child's startup data. */
+	if (flags != (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD) ||
+	    !fn || !stack_top) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -37,12 +40,13 @@ int clone(int (*fn)(void *), void *arg, void *stack_top)
 	args = (struct clone_args *) stack_top - 1;
 	args->fn = fn;
 	args->arg = arg;
-	/* GCC 1.40 needs the function address cast and explicit memory inputs
-	 * to keep these stores before the syscall (no "memory" clobber). */
+	/* GCC 1.40 needs the function address cast and an explicit memory input
+	 * for both stores (no "memory" clobber). One aggregate input also keeps
+	 * this within its seven-operand inline-assembly limit. */
 	__asm__ volatile ("int $0x80"
 		:"=a" (res)
 		:"0" (__NR_clone),"b" ((long) clone_start),"c" (args),
-		"d" (args),"m" (args->fn),"m" (args->arg));
+		"d" (args),"S" (flags),"m" (*args));
 	if (res>=0)
 		return res;
 	errno = -res;

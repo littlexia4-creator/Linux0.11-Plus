@@ -55,7 +55,7 @@ exit.s exit.o: exit.c ../include/errno.h ../include/signal.h \
   ../include/linux/head.h ../include/linux/fs.h ../include/linux/mm.h \
   ../include/linux/kernel.h ../include/linux/tty.h ../include/termios.h \
   ../include/asm/segment.h
-task.s task.o: task.c ../include/errno.h ../include/linux/sched.h \
+task.s task.o: task.c ../include/errno.h ../include/sched.h ../include/linux/sched.h \
   ../include/linux/head.h ../include/linux/fs.h ../include/sys/types.h \
   ../include/linux/mm.h ../include/signal.h ../include/linux/kernel.h \
   ../include/asm/segment.h ../include/asm/system.h
