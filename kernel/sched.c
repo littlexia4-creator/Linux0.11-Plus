@@ -358,20 +358,14 @@ int sys_gettid(void)
 
 int sys_getppid(void)
 {
-	long parent_tid = current->father;
-	int i, depth;
+	struct task_struct *parent = current->real_parent;
+	int depth;
 
-	/* Clone's creator link stays task-based for wait/exit. Skip creators
-	 * in our own process to report the parent process's PID. */
-	for (depth = 0; depth < NR_TASKS; depth++) {
-		for (i = 0; i < NR_TASKS; i++)
-			if (task[i] && task[i]->tid == parent_tid)
-				break;
-		if (i == NR_TASKS)
-			return 0;
-		if (task[i]->tgid != current->tgid)
-			return task[i]->tgid;
-		parent_tid = task[i]->father;
+	/* Skip creators in our own process while clone uses task-based wait. */
+	for (depth = 0; parent && depth < NR_TASKS; depth++) {
+		if (parent->tgid != current->tgid)
+			return parent->tgid;
+		parent = parent->real_parent;
 	}
 	return 0;
 }

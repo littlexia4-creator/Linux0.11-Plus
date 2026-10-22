@@ -88,6 +88,7 @@ int kernel_thread(long (*fn)(void *), void *arg, const char *name)
 
 void kthread_exit(long code)
 {
+	reparent_children(current);
 	current->exit_code = code;
 	current->tcb.state = TASK_ZOMBIE;
 	wake_up(&current->kthread.wait_head);

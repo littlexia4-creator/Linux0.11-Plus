@@ -82,23 +82,23 @@ int sys_kill(int pid,int sig)
 	return retval;
 }
 
-static void tell_father(int pid)
+/* Detach every child before its parent task can be freed, including
+ * children created by kernel threads. Kernel threads are reaped by join. */
+void reparent_children(struct task_struct *parent)
 {
+	struct task_struct *p, *reaper = task[1];
 	int i;
 
-	if (pid)
-		for (i=0;i<NR_TASKS;i++) {
-			if (!task[i])
-				continue;
-			if (task[i]->tid != pid)
-				continue;
-			task[i]->signal |= (1<<(SIGCHLD-1));
-			return;
-		}
-/* if we don't find any fathers, we just release ourselves */
-/* This is not really OK. Must change it to make father 1 */
-	printk("BAD BAD - no father found\n\r");
-	release(current);
+	if (!reaper || reaper == parent)
+		reaper = task[0];
+	for (i=1; i<NR_TASKS; i++) {
+		p = task[i];
+		if (!p || p->real_parent != parent)
+			continue;
+		p->real_parent = reaper;
+		if (!p->kthread.entry && p->tcb.state == TASK_ZOMBIE)
+			reaper->signal |= 1 << (SIGCHLD-1);
+	}
 }
 
 int do_exit(long code)
@@ -106,13 +106,7 @@ int do_exit(long code)
 	int i;
 	free_page_tables(get_base(current->ldt[1]),get_limit(0x0f));
 	free_page_tables(get_base(current->ldt[2]),get_limit(0x17));
-	for (i=0 ; i<NR_TASKS ; i++)
-		if (task[i] && task[i]->father == current->tid) {
-			task[i]->father = 1;
-			if (task[i]->tcb.state == TASK_ZOMBIE)
-				/* assumption task[1] is always init */
-				(void) send_sig(SIGCHLD, task[1], 1);
-		}
+	reparent_children(current);
 	for (i=0 ; i<NR_OPEN ; i++)
 		if (current->filp[i])
 			sys_close(i);
@@ -130,7 +124,8 @@ int do_exit(long code)
 		kill_session();
 	current->tcb.state = TASK_ZOMBIE;
 	current->exit_code = code;
-	tell_father(current->father);
+	if (current->real_parent)
+		current->real_parent->signal |= 1 << (SIGCHLD-1);
 	schedule();
 	return (-1);	/* just to suppress warnings */
 }
@@ -150,9 +145,9 @@ int sys_waitpid(pid_t pid,unsigned long * stat_addr, int options)
 repeat:
 	flag=0;
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
-		if (!*p || *p == current)
+		if (!*p || *p == current || (*p)->kthread.entry)
 			continue;
-		if ((*p)->father != current->tid)
+		if ((*p)->real_parent != current)
 			continue;
 		if (pid>0) {
 			if ((*p)->tid != pid)
