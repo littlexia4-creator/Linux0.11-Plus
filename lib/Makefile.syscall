@@ -5,7 +5,8 @@ AR = $(SYSCALL_TOOLCHAIN)/bin/i386-linux011-ar.exe
 CFLAGS = -O -nostdinc -I../include
 
 # Keep a.out objects separate from the kernel's PE/COFF objects.
-OBJS = syscall/clone.o syscall/gettid.o syscall/exit_group.o
+OBJS = syscall/clone.o syscall/gettid.o syscall/exit_group.o \
+	syscall/times.o
 HEADERS = ../include/unistd.h ../include/sched.h ../include/errno.h ../include/sys/stat.h \
 	../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h ../include/utime.h \
 	../include/linux/futex.h ../include/stdarg.h
