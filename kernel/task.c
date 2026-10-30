@@ -45,6 +45,7 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 	p->real_parent = current;
 	p->group = NULL;
 	p->futex_uaddr = 0;
+	p->clear_child_tid = NULL;
 	p->tcb.counter = p->tcb.priority;
 	p->signal = 0;
 	p->alarm = 0;
@@ -174,9 +175,9 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 }
 
 /*
- * Raw clone(fn, arg, stack_top, flags) -- create a user thread.
- * ebx/ecx/edx carry fn/arg/stack_top and the saved esi carries flags.
- * The C wrapper exposes clone(fn, stack_top, flags, arg).
+ * Raw clone(fn, arg, stack_top, flags, child_tid, parent_tid).
+ * ebx/ecx/edx carry fn/arg/stack_top; saved esi/edi/ebp carry the rest.
+ * The C wrapper exposes clone(fn, stack_top, flags, arg, ...).
  *
  * Same as copy_process except:
  *  - copy_mem() is skipped: the child inherits the parent's LDT
@@ -198,8 +199,11 @@ int do_clone(long ebp,long edi,long esi,long gs,long none,
 	int i, nr, error;
 	struct file *f;
 
-	/* This kernel supports one sharing policy; reject all other masks. */
-	if (esi != (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD))
+	/* Keep the fixed sharing policy, with optional TID notifications. */
+	if ((esi & (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD)) !=
+	    (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD) ||
+	    (esi & ~(CLONE_VM | CLONE_SIGHAND | CLONE_THREAD |
+	    CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID)))
 		return -EINVAL;
 	if (!current->group || current->group->exiting ||
 	    current->group->exec_task)
@@ -207,6 +211,20 @@ int do_clone(long ebp,long edi,long esi,long gs,long none,
 	if (!ebx || (unsigned long) ebx >= get_limit(0x0f) ||
 	    edx < 8 || !user_range(edx - 8, 8))
 		return -EFAULT;
+	if (esi & CLONE_PARENT_SETTID) {
+		if (ebp & 3)
+			return -EINVAL;
+		if (!user_range(ebp, 4))
+			return -EFAULT;
+		verify_area((void *)ebp, 4);
+	}
+	if (esi & CLONE_CHILD_CLEARTID) {
+		if (edi & 3)
+			return -EINVAL;
+		if (!user_range(edi, 4))
+			return -EFAULT;
+		verify_area((void *)edi, 4);
+	}
 	/* Write the frame before reserving a task or group reference:
 	 * verify_area handles COW, but does not fault in missing pages. */
 	verify_area((void *)(edx - 8), 8);
@@ -217,6 +235,7 @@ int do_clone(long ebp,long edi,long esi,long gs,long none,
 	p = alloc_task(nr, current);
 	if (!p)
 		return -EAGAIN;
+	p->clear_child_tid = (esi & CLONE_CHILD_CLEARTID) ? (int *)edi : NULL;
 	if ((error = join_thread_group(p))) {
 		task[nr] = NULL;
 		free_page((long) p);
@@ -246,6 +265,9 @@ int do_clone(long ebp,long edi,long esi,long gs,long none,
 		current->root->i_count++;
 	if (current->executable)
 		current->executable->i_count++;
+	/* Publish before activation: a fast child may exit before clone returns. */
+	if (esi & CLONE_PARENT_SETTID)
+		put_fs_long(p->tid, (unsigned long *)ebp);
 	start_task(nr, p);
 	return p->tid;
 }

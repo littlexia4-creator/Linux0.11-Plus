@@ -148,6 +148,7 @@ struct task_struct {
 	struct kthread_info kthread;
 	struct thread_group *group; /* NULL for idle and kernel threads */
 	unsigned long futex_uaddr; /* zero unless waiting on a user futex */
+	int *clear_child_tid; /* user word cleared and woken at thread exit */
 };
 
 /*
@@ -178,6 +179,7 @@ struct task_struct {
 /* kthread */ {NULL,NULL,{0},NULL}, \
 /* group */ NULL, \
 /* futex */ 0, \
+/* clear_child_tid */ NULL, \
 }
 
 extern struct task_struct *task[NR_TASKS];

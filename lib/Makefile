@@ -44,7 +44,7 @@ dep:
 
 ### Dependencies:
 exit_group.o clone.o: ../include/unistd.h
-clone.o: ../include/sched.h
+clone.o: ../include/sched.h ../include/stdarg.h
 gettid.o: ../include/unistd.h
 futex.o: ../include/unistd.h ../include/linux/futex.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \

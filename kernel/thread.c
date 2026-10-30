@@ -114,10 +114,21 @@ int sys_exit_group(int code)
 void finish_thread(long code)
 {
 	struct thread_group *g = current->group;
+	int *addr;
 	int i;
 
 	if (!g)
 		panic("user exit without a thread group");
+	current->futex_uaddr = 0;
+	addr = current->clear_child_tid;
+	current->clear_child_tid = NULL;
+	if (addr) {
+		/* No more user-stack accesses after this notification. The kernel
+		 * stack is reclaimed separately after switching to another task. */
+		verify_area(addr, 4);
+		put_fs_long(0, (unsigned long *)addr);
+		futex_wake(g, (unsigned long)addr, 1);
+	}
 	g->utime += current->utime;
 	g->stime += current->stime;
 	if (current == g->leader && !g->exiting)
@@ -176,5 +187,6 @@ int de_thread(void)
 	g->exit_code = g->stop_report = 0;
 	g->exec_task = NULL;
 	current->futex_uaddr = 0;
+	current->clear_child_tid = NULL;
 	return 0;
 }
