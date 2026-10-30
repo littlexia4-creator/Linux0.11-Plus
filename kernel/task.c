@@ -43,6 +43,7 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 	p->tgid = p->tid;	/* fork and kernel threads start a new process */
 	p->real_parent = current;
 	p->group = NULL;
+	p->futex_uaddr = 0;
 	p->tcb.counter = p->tcb.priority;
 	p->signal = 0;
 	p->alarm = 0;

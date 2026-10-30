@@ -37,7 +37,7 @@ CHR_DRV_SRC  = kernel/chr_drv/tty_io.c kernel/chr_drv/console.c kernel/chr_drv/k
 	      kernel/chr_drv/tty_ioctl.s
 
 KERNEL_SRC  = kernel/sched.c kernel/system_call.s kernel/traps.s kernel/asm.s kernel/task.c kernel/thread.c \
-	kernel/kthread.c \
+	kernel/kthread.c kernel/futex.c \
 	kernel/panic.c kernel/printk.c kernel/vsprintf.c kernel/sys.c kernel/exit.c \
 	kernel/signal.c kernel/mktime.c
 
@@ -48,7 +48,7 @@ FS_SRC=	fs/open.c fs/read_write.c fs/inode.c fs/file_table.c fs/buffer.c fs/supe
 	fs/bitmap.c fs/fcntl.c fs/ioctl.c fs/truncate.c
 
 LIB_SRC  = lib/ctype.c lib/_exit.c lib/open.c lib/close.c lib/errno.c lib/write.c lib/dup.c lib/setsid.c \
-	lib/execve.c lib/wait.c lib/string.c lib/malloc.c lib/gettid.c
+	lib/execve.c lib/wait.c lib/string.c lib/malloc.c lib/gettid.c lib/futex.c
 
 ARCHIVES=kernel/kernel.o mm/mm.o fs/fs.o
 #ARCHIVES=$(KERNEL_OBJS) mm/mm.o fs/fs.o

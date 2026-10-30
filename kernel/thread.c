@@ -175,5 +175,6 @@ int de_thread(void)
 	reap_dead_tasks();
 	g->exit_code = g->stop_report = 0;
 	g->exec_task = NULL;
+	current->futex_uaddr = 0;
 	return 0;
 }

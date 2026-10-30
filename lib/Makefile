@@ -25,9 +25,10 @@ CPP	=gcc -E -nostdinc -I../include
 	-c -o $*.o $<
 
 OBJS  = ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o \
-	execve.o wait.o string.o malloc.o gettid.o
+	execve.o wait.o string.o malloc.o gettid.o futex.o
 
-lib.a: $(OBJS)
+lib.a: $(OBJS) Makefile
+	rm -f $@
 	$(AR) rcs lib.a $(OBJS)
 	sync
 
@@ -43,6 +44,7 @@ dep:
 
 ### Dependencies:
 gettid.o: ../include/unistd.h
+futex.o: ../include/unistd.h ../include/linux/futex.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
   ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \
   ../include/utime.h 
