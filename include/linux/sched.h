@@ -147,6 +147,7 @@ struct task_struct {
 /* kernel-thread info (appended: keeps every asm-visible offset intact) */
 	struct kthread_info kthread;
 	struct thread_group *group; /* NULL for idle and kernel threads */
+	unsigned long futex_uaddr; /* zero unless waiting on a user futex */
 };
 
 /*
@@ -176,6 +177,7 @@ struct task_struct {
 	}, \
 /* kthread */ {NULL,NULL,{0},NULL}, \
 /* group */ NULL, \
+/* futex */ 0, \
 }
 
 extern struct task_struct *task[NR_TASKS];
@@ -217,6 +219,7 @@ extern int join_thread_group(struct task_struct *p);
 extern void release(struct task_struct *p);
 extern void reap_dead_tasks(void);
 extern void wake_thread_group(struct thread_group *g);
+extern int futex_wake(struct thread_group *g, unsigned long addr, int count);
 extern void notify_parent(struct thread_group *g);
 extern void finish_thread(long code);
 extern int de_thread(void);
