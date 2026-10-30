@@ -183,7 +183,7 @@ repeat:
 	if (flag) {
 		if (options & WNOHANG)
 			return 0;
-		current->tcb.state=TASK_INTERRUPTIBLE;
+		current->tcb.state=TASK_SLEEP_INTERRUPTIBLE;
 		schedule();
 		if (!(current->signal &= ~(1<<(SIGCHLD-1))))
 			goto repeat;
