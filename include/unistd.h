@@ -133,6 +133,7 @@
 #define __NR_clone	73	/* user threads sharing the address space */
 /* 74 is reserved for the removed user-thread join syscall. */
 #define __NR_exit_group	75	/* terminate all threads in this process */
+#define __NR_futex	76	/* minimal process-local wait/wake */
 
 #define _syscall0(type,name) \
 type name(void) \
