@@ -20,6 +20,11 @@ static int do_futex_wake(struct thread_group *g, unsigned long addr, int count)
 	return woken;
 }
 
+int wake_up_futex(struct thread_group *g, unsigned long addr, int count)
+{
+	return do_futex_wake(g, addr, count);
+}
+
 static int do_futex_wait(struct thread_group *g, unsigned long addr, int expected)
 {
 	/* On this uniprocessor, kernel context is not preemptible. There is
