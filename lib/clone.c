@@ -12,11 +12,14 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sched.h>
+#include <stdarg.h>
 #include "clone.h"
 
 struct clone_args {
 	int (*fn)(void *);
 	void *arg;
+	int *ctid;
+	int *ptid;
 };
 
 static void clone_start(void *arg)
@@ -29,13 +32,17 @@ static void clone_start(void *arg)
 static int valid_clone(int (*fn)(void *), void *stack_top, int flags)
 {
 	/* Reject unsupported policies before writing the child's startup data. */
-	if (flags != (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD) ||
+	if ((flags & (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD)) !=
+	    (CLONE_VM | CLONE_SIGHAND | CLONE_THREAD) ||
+	    (flags & ~(CLONE_VM | CLONE_SIGHAND | CLONE_THREAD |
+	    CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID)) ||
 	    !fn || !stack_top)
 		return 0;
 	return 1;
 }
 
-int __clone_raw(int (*fn)(void *), void *stack_top, int flags, void *arg)
+int __clone_raw(int (*fn)(void *), void *stack_top, int flags, void *arg,
+		int *parent_tid, int *child_tid)
 {
 	struct clone_args *args;
 	register int res;
@@ -46,20 +53,40 @@ int __clone_raw(int (*fn)(void *), void *stack_top, int flags, void *arg)
 	args = (struct clone_args *) stack_top - 1;
 	args->fn = fn;
 	args->arg = arg;
-	/* GCC 1.40 needs the function address cast and an explicit memory input
-	 * for both stores (no "memory" clobber). One aggregate input also keeps
-	 * this within its seven-operand inline-assembly limit. */
-	__asm__ volatile ("int $0x80"
+	args->ctid = child_tid;
+	args->ptid = parent_tid;
+	/* GCC 1.40 has no memory clobber and permits at most seven operands.
+	 * One aggregate input covers the startup stores. Load edi/ebp from
+	 * it, preserving both registers for the parent's C calling convention. */
+	__asm__ volatile ("pushl %%ebp\n\tpushl %%edi\n\t"
+		"movl 8(%%ecx),%%edi\n\tmovl 12(%%ecx),%%ebp\n\t"
+		"int $0x80\n\tpopl %%edi\n\tpopl %%ebp"
 		:"=a" (res)
 		:"0" (__NR_clone),"b" ((long) clone_start),"c" (args),
 		"d" (args),"S" (flags),"m" (*args));
 	return res;
 }
 
-int __clone(int (*fn)(void *), void *stack_top, int flags, void *arg)
+int __clone(int (*fn)(void *), void *stack_top, int flags, void *arg, ...)
 {
-	int res = __clone_raw(fn, stack_top, flags, arg);
+	int *ptid = NULL, *ctid = NULL;
+	va_list ap;
+	int res;
 
+	/* Validate before reading optional arguments from an invalid call. */
+	if (!valid_clone(fn, stack_top, flags)) {
+		errno = EINVAL;
+		return -1;
+	}
+	va_start(ap, arg);
+	if (flags & (CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID))
+		ptid = va_arg(ap, int *);
+	if (flags & CLONE_CHILD_CLEARTID) {
+		(void)va_arg(ap, void *); /* TLS placeholder; CLONE_SETTLS is unsupported. */
+		ctid = va_arg(ap, int *);
+	}
+	va_end(ap);
+	res = __clone_raw(fn, stack_top, flags, arg, ptid, ctid);
 	if (res>=0)
 		return res;
 	errno = -res;
