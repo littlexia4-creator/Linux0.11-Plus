@@ -80,7 +80,7 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 		return -EAGAIN;
 	task[nr] = p;
 	*p = *current;	/* NOTE! this doesn't copy the supervisor stack */
-	p->tcb.state = TASK_UNINTERRUPTIBLE;
+	p->tcb.state = TASK_SLEEP_UNINTERRUPTIBLE;
 	p->pid = last_pid;
 	p->father = current->pid;
 	p->tcb.counter = p->tcb.priority;

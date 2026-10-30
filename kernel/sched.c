@@ -115,7 +115,7 @@ void schedule(void)
 					(*p)->alarm = 0;
 				}
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
-			(*p)->tcb.state==TASK_INTERRUPTIBLE)
+			(*p)->tcb.state==TASK_SLEEP_INTERRUPTIBLE)
 				(*p)->tcb.state=TASK_RUNNING;
 		}
 
@@ -143,7 +143,7 @@ void schedule(void)
 
 int sys_pause(void)
 {
-	current->tcb.state = TASK_INTERRUPTIBLE;
+	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
 	schedule();
 	return 0;
 }
@@ -158,7 +158,7 @@ void sleep_on(struct task_struct **p)
 		panic("task[0] trying to sleep");
 	tmp = *p;
 	*p = current;
-	current->tcb.state = TASK_UNINTERRUPTIBLE;
+	current->tcb.state = TASK_SLEEP_UNINTERRUPTIBLE;
 	schedule();
 	if (tmp)
 		tmp->tcb.state=0;
@@ -174,7 +174,7 @@ void interruptible_sleep_on(struct task_struct **p)
 		panic("task[0] trying to sleep");
 	tmp=*p;
 	*p=current;
-repeat:	current->tcb.state = TASK_INTERRUPTIBLE;
+repeat:	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
 	schedule();
 	if (*p && *p != current) {
 		(**p).tcb.state=0;
