@@ -216,7 +216,7 @@ int fork(void);
 int getpid(void);
 int gettid(void);
 /* CLONE_* flags are declared in <sched.h>. */
-int clone(int (*fn)(void *), void *stack_top, int flags, void *arg);
+int clone(int (*fn)(void *), void *stack_top, int flags, void *arg, ...);
 volatile void exit_group(int status);
 int getuid(void);
 int geteuid(void);
