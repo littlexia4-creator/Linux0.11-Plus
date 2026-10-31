@@ -46,7 +46,7 @@ int write_pipe(struct m_inode * inode, char * buf, int count)
 		while (!(size=(PAGE_SIZE-1)-PIPE_SIZE(*inode))) {
 			wake_up(&inode->i_wait);
 			if (inode->i_count != 2) { /* no readers */
-				current->signal |= (1<<(SIGPIPE-1));
+				send_task_signal(current, SIGPIPE);
 				return written?written:-1;
 			}
 			sleep_on(&inode->i_wait);
