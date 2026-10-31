@@ -107,22 +107,42 @@ void schedule(void)
 	int i,next,c;
 	struct task_struct ** p;
 
+	/* Reclaim earlier dead tasks, excluding the stack we are using. */
 	reap_dead_tasks();
 
-/* check alarm, wake up any interruptible tasks that have got a signal */
+	/* Queue expired alarms and wake sleeping-interruptible tasks. */
 
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 		if (*p) {
+			/* Per-task alarm deadlines also serve terminal read timeouts. */
 			if ((*p)->alarm && (*p)->alarm < jiffies) {
 					(*p)->signal |= (1<<(SIGALRM-1));
 					(*p)->alarm = 0;
 				}
+			/* Checking every task does not wake every interruptible sleeper.
+			 * There must also be at least one allowed pending signal.
+			 * No pending signals means zero: 0 & anything == 0, so no wakeup.
+			 *
+			 * For ordinary blockable signals, think: pending & ~blocked.
+			 * A set bit in blocked masks that signal; ~blocked marks allowed
+			 * signals. AND keeps only signals both pending and allowed.
+			 *
+			 * _BLOCKABLE has zero bits for SIGKILL and SIGSTOP, which cannot
+			 * be blocked. Thus (_BLOCKABLE & blocked) is the effective blocked
+			 * mask: these two signals pass even if their blocked bits are set.
+			 *
+			 * Examples for a task in TASK_SLEEP_INTERRUPTIBLE:
+			 *   Pending   Blocked   Woken?
+			 *   none      none      no
+			 *   SIGALRM   none      yes
+			 *   SIGALRM   SIGALRM   no
+			 *   SIGALRM   SIGXXX    yes */
 			if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
 			(*p)->tcb.state==TASK_SLEEP_INTERRUPTIBLE)
 				(*p)->tcb.state=TASK_RUNNING;
 		}
 
-/* this is the scheduler proper: */
+	/* Select the runnable task with the most time-slice ticks remaining. */
 
 	while (1) {
 		c = -1;
@@ -135,13 +155,28 @@ void schedule(void)
 			if ((*p)->tcb.state == TASK_RUNNING && (*p)->tcb.counter > c)
 				c = (*p)->tcb.counter, next = i;
 		}
+		/* Positive c selects a task; c == -1 falls back to idle task 0.
+		 * Only c == 0 means runnable tasks have exhausted their slices. */
 		if (c) break;
+		/* All runnable non-idle tasks now have counter == 0. Without a
+		 * refill, the next scan would find zero again and keep looping.
+		 *
+		 * priority is the base CPU budget granted on each refill; larger
+		 * values grant more timer ticks.
+		 *
+		 * Refill every task, including sleepers. Halving the
+		 * old credit prevents unlimited accumulation across refills.
+		 * This changes budgets only; sleeping tasks remain asleep.
+		 *
+		 * The next while iteration selects a runnable task using its
+		 * replenished counter. */
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)
 				(*p)->tcb.counter = ((*p)->tcb.counter >> 1) +
 						(*p)->tcb.priority;
 	}
 	switch_to(next);
+	/* We may now reclaim a task that exited and switched to us. */
 	reap_dead_tasks();
 }
 
