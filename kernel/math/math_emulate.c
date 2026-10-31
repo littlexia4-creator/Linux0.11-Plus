@@ -31,12 +31,12 @@ void math_emulate(long edi, long esi, long ebp, long sys_call_ret,
 	first = get_fs_byte((char *)((*&eip)++));
 	second = get_fs_byte((char *)((*&eip)++));
 	printk("%04x:%08x %02x %02x\n\r",cs,eip-2,first,second);
-	current->signal |= 1<<(SIGFPE-1);
+	send_task_signal(current, SIGFPE);
 }
 
 void math_error(void)
 {
 	__asm__("fnclex");
 	if (last_task_used_math)
-		last_task_used_math->signal |= 1<<(SIGFPE-1);
+		send_task_signal(last_task_used_math, SIGFPE);
 }

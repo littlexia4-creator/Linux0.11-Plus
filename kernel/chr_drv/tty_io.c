@@ -248,7 +248,7 @@ int tty_read(unsigned channel, char * buf, int nr)
 		minimum=nr;
 	while (nr>0) {
 		if (flag && (current->signal & ALRMMASK)) {
-			current->signal &= ~ALRMMASK;
+			clear_task_pending(current, ALRMMASK);
 			break;
 		}
 		if (current->signal)

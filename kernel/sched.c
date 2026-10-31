@@ -116,7 +116,7 @@ void schedule(void)
 		if (*p) {
 			/* Per-task alarm deadlines also serve terminal read timeouts. */
 			if ((*p)->alarm && (*p)->alarm < jiffies) {
-					(*p)->signal |= (1<<(SIGALRM-1));
+					send_task_signal(*p, SIGALRM);
 					(*p)->alarm = 0;
 				}
 			/* Checking every task does not wake every interruptible sleeper.

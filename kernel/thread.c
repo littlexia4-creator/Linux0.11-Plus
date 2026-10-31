@@ -44,7 +44,7 @@ void notify_parent(struct thread_group *g)
 	struct task_struct *parent = g->leader->real_parent;
 
 	if (parent && parent->group) {
-		parent->signal |= 1 << (SIGCHLD-1);
+		send_task_signal(parent, SIGCHLD);
 		/* waitpid must also wake when SIGCHLD is blocked/ignored. */
 		wake_thread_group(parent->group);
 	}
@@ -75,7 +75,7 @@ void finish_thread(long code)
 				tty_table[g->leader->tty].pgrp = 0;
 			for (i=1; i<NR_TASKS; i++)
 				if (task[i] && task[i]->session == current->session)
-					task[i]->signal |= 1 << (SIGHUP-1);
+					send_task_signal(task[i], SIGHUP);
 		}
 		notify_parent(g);
 	}
