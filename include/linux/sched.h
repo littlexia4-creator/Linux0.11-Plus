@@ -216,6 +216,17 @@ extern void wake_thread_group(struct thread_group *g);
 extern void notify_parent(struct thread_group *g);
 extern void finish_thread(long code);
 
+/* Queue a task-local signal (1..32). Callers manage wakeups and group actions. */
+static inline void send_task_signal(struct task_struct *p, int sig)
+{
+	p->signal |= 1UL << (sig-1);
+}
+
+static inline void clear_task_pending(struct task_struct *p, unsigned long mask)
+{
+	p->signal &= ~mask;
+}
+
 
 /*
  * Entry into gdt where to find first TSS. 0-nul, 1-cs, 2-ds, 3-syscall

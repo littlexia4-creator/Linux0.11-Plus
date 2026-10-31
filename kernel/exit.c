@@ -42,7 +42,7 @@ static inline int send_sig(long sig,struct task_struct * p,int priv)
 	if (!p || sig<1 || sig>32)
 		return -EINVAL;
 	if (priv || (current->euid==p->euid) || suser())
-		p->signal |= (1<<(sig-1));
+		send_task_signal(p, sig);
 	else
 		return -EPERM;
 	return 0;
@@ -186,7 +186,7 @@ repeat:
 	if (current->sigaction[SIGCHLD-1].sa_handler == SIG_DFL ||
 	    current->sigaction[SIGCHLD-1].sa_handler == SIG_IGN) {
 		code &= ~(1 << (SIGCHLD-1));
-		current->signal &= ~(1 << (SIGCHLD-1));
+		clear_task_pending(current, 1UL << (SIGCHLD-1));
 	}
 	if (code)
 		return -EINTR;
