@@ -134,6 +134,7 @@ int execl(const char * pathname, char * arg0, ...);
 int execlp(const char * file, char * arg0, ...);
 int execle(const char * pathname, char * arg0, ...);
 volatile void exit(int status);
+/* Terminate the process and every thread in it. */
 volatile void _exit(int status);
 int fcntl(int fildes, int cmd, ...);
 int fork(void);
@@ -141,7 +142,6 @@ int getpid(void);
 int gettid(void);
 /* CLONE_* flags are declared in <sched.h>. */
 int clone(int (*fn)(void *), void *stack_top, int flags, void *arg, ...);
-volatile void exit_group(int status);
 int getuid(void);
 int geteuid(void);
 int getgid(void);
