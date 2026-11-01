@@ -13,8 +13,9 @@
  * optional flag is set, and all three when CHILD_CLEARTID is set. Enabled TID
  * pointers must be non-NULL, aligned 32-bit words. CHILD_CLEARTID does not
  * initialize its word: initialize it before clone, or use the same word for
- * PARENT_SETTID. The wrapper passes fn(arg)'s return value to _exit(); result
- * retention and joining belong in user space. */
+ * PARENT_SETTID. Returning from fn(arg) passes its result to the raw exit
+ * syscall, terminating only that thread. Result retention and joining
+ * belong in user space. */
 int clone(int (*fn)(void *), void *stack_top, int flags, void *arg, ...);
 
 #endif
