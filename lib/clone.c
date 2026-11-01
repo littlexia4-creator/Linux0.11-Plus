@@ -6,7 +6,9 @@
  *  CPL3 (e.g. from init() after move_to_user_mode) and traps into
  *  the kernel through int $0x80. Returns the new thread's TID; the new
  *  thread shares the caller's TGID (the process ID returned by getpid()).
- *  When fn(arg) returns, its result becomes the thread's exit status.
+ *  When fn(arg) returns, its result is passed to the raw exit syscall,
+ *  terminating only that thread. Result retention and joining belong
+ *  in user space.
  */
 #define __LIBRARY__
 #include <unistd.h>
@@ -26,7 +28,8 @@ static void clone_start(void *arg)
 {
 	struct clone_args *args = arg;
 
-	_exit(args->fn(args->arg));
+	/* _exit() terminates the group; raw exit terminates this thread. */
+	syscall(SYS_exit, args->fn(args->arg));
 }
 
 static int valid_clone(int (*fn)(void *), void *stack_top, int flags)
