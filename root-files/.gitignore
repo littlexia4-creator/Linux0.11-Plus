@@ -4,3 +4,4 @@
 !/futex_wait.h
 !/build_thr.sh
 !/strncpy_test.c
+!/pipe_test.c
