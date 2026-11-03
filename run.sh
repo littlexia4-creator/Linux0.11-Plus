@@ -23,6 +23,7 @@ cp include/unistd.h root-files/include/unistd.h || exit 1
 cp include/sched.h root-files/include/sched.h || exit 1
 cp include/linux/futex.h root-files/include/linux/futex.h || exit 1
 cp include/sys/syscall.h root-files/include/sys/syscall.h || exit 1
+cp include/signal.h root-files/include/signal.h || exit 1
 
 # overlay: stage root-files/* into the guest disk image
 ./overlay.sh || exit 1
