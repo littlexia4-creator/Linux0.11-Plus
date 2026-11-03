@@ -61,6 +61,8 @@ int sigemptyset(sigset_t *mask);
 int sigfillset(sigset_t *mask);
 int sigismember(sigset_t *mask, int signo); /* 1 - is, 0 - not, -1 error */
 int sigpending(sigset_t *set);
+/* Replace this thread's signal mask and return the previous bitmap. */
+int ssetmask(int value);
 int sigprocmask(int how, sigset_t *set, sigset_t *oldset);
 int sigsuspend(sigset_t *sigmask);
 int sigaction(int sig, struct sigaction *act, struct sigaction *oldact);
