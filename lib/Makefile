@@ -25,12 +25,14 @@ CPP	=gcc -E -nostdinc -I../include
 	-c -o $*.o $<
 
 OBJS  = ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o \
-	execve.o wait.o string.o malloc.o clone.o gettid.o exit_group.o
+	execve.o wait.o string.o malloc.o clone.o gettid.o syscall.o exit_group.o
 
 lib.a: $(OBJS) Makefile
 	rm -f $@
 	$(AR) rcs lib.a $(OBJS)
 	sync
+
+$(OBJS): ../include/sys/syscall.h
 
 clean:
 	rm -f core *.o *.a tmp_make
@@ -43,6 +45,7 @@ dep:
 	cp tmp_make Makefile
 
 ### Dependencies:
+syscall.o: ../include/sys/syscall.h ../include/errno.h
 exit_group.o clone.o: ../include/unistd.h
 clone.o: ../include/sched.h ../include/stdarg.h
 gettid.o: ../include/unistd.h

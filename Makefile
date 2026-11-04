@@ -48,7 +48,7 @@ FS_SRC=	fs/open.c fs/read_write.c fs/inode.c fs/file_table.c fs/buffer.c fs/supe
 	fs/bitmap.c fs/fcntl.c fs/ioctl.c fs/truncate.c
 
 LIB_SRC  = lib/ctype.c lib/_exit.c lib/open.c lib/close.c lib/errno.c lib/write.c lib/dup.c lib/setsid.c \
-	lib/execve.c lib/wait.c lib/string.c lib/malloc.c lib/clone.c lib/gettid.c lib/exit_group.c
+	lib/execve.c lib/wait.c lib/string.c lib/malloc.c lib/clone.c lib/gettid.c lib/syscall.c lib/exit_group.c
 
 ARCHIVES=kernel/kernel.o mm/mm.o fs/fs.o
 #ARCHIVES=$(KERNEL_OBJS) mm/mm.o fs/fs.o
@@ -68,6 +68,9 @@ LIBS	=lib/lib.a
 	-nostdinc -Iinclude -c -o $*.o $<
 
 all:	Boot.img lib/libc_syscalls.a
+
+# <unistd.h> gets its syscall numbers from this shared header.
+init/main.o $(LIBS): include/sys/syscall.h
 
 # Every task_struct user must see the same layout after a header change.
 $(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h
