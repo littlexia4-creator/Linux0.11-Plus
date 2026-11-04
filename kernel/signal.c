@@ -93,6 +93,42 @@ int sys_ssetmask(int newmask)
 	return old;
 }
 
+int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
+{
+	sigset_t old = current->blocked;
+	sigset_t mask;
+
+	if (set) {
+		if (how != SIG_BLOCK && how != SIG_UNBLOCK && how != SIG_SETMASK)
+			return -EINVAL;
+		if (!user_range((unsigned long)set, sizeof(*set)))
+			return -EFAULT;
+	}
+	/* Read the input first: set and oldset may point to the same word. */
+	if (set) {
+		mask = get_fs_long((unsigned long *)set);
+		switch (how) {
+		case SIG_BLOCK:
+			mask |= old;
+			break;
+		case SIG_UNBLOCK:
+			mask = old & ~mask;
+			break;
+		}
+		/* Kernel execution is nonpreemptible; no user handler runs between
+		 * reading the old mask and applying this update. */
+		current->blocked = mask & ~(SIGBIT(SIGKILL)|SIGBIT(SIGSTOP));
+	}
+	if (oldset) {
+		/* An output fault leaves the new signal mask applied. */
+		if (!user_range((unsigned long)oldset, sizeof(*oldset)))
+			return -EFAULT;
+		verify_area(oldset, sizeof(*oldset));
+		put_fs_long(old, (unsigned long *)oldset);
+	}
+	return 0;
+}
+
 static inline void save_old(char * from,char * to)
 {
 	int i;
