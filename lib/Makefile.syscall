@@ -6,7 +6,8 @@ CFLAGS = -O -nostdinc -I../include
 
 # Keep a.out objects separate from the kernel's PE/COFF objects.
 OBJS = syscall/clone.o syscall/gettid.o syscall/_exit.o \
-	syscall/times.o syscall/ssetmask.o syscall/syscall.o
+	syscall/times.o syscall/ssetmask.o syscall/syscall.o \
+	syscall/sigsetops.o syscall/pthread_sigmask.o
 HEADERS = ../include/unistd.h ../include/sched.h ../include/errno.h ../include/sys/stat.h \
 	../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h ../include/utime.h \
 	../include/linux/futex.h ../include/stdarg.h ../include/signal.h \
