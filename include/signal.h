@@ -6,7 +6,7 @@
 typedef int sig_atomic_t;
 typedef unsigned int sigset_t;		/* 32 bits */
 
-#define _NSIG             32
+#define _NSIG             33	/* highest signal number + 1 */
 #define NSIG		_NSIG
 
 #define SIGHUP		 1
