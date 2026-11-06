@@ -46,7 +46,7 @@ dep:
 
 ### Dependencies:
 syscall.o: ../include/sys/syscall.h ../include/errno.h sysdep.h
-clone.o: ../include/unistd.h ../include/sched.h ../include/stdarg.h
+clone.o: ../include/unistd.h ../include/sched.h ../include/stdarg.h clone.h
 gettid.o: ../include/unistd.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
   ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \
