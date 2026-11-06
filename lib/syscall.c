@@ -1,6 +1,17 @@
 /* User-space i386 entry for syscall(number, ...). */
 #include <sys/syscall.h>
 #include <errno.h>
+#include "sysdep.h"
+
+long __syscall3(long number, long first, long second, long third)
+{
+	long result;
+
+	__asm__ volatile ("int $0x80"
+		: "=a" (result)
+		: "0" (number), "b" (first), "c" (second), "d" (third));
+	return result;
+}
 
 long syscall(long number, ...)
 {
