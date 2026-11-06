@@ -14,14 +14,18 @@
 struct pthread_descriptor {
 	pthread_t handle;
 	volatile int tid;
+	int joining;
 	void *(*start)(void *);
 	void *arg;
 	void *result;
 	char stack[STACK_SIZE];
 };
 
-/* BSS storage avoids the non-reentrant guest heap allocator. Finished
- * threads retain their slots after exiting. */
+/* BSS storage avoids the non-reentrant guest heap allocator. A finished
+ * joinable thread still owns its slot until another thread joins it.
+ * Leaving threads joinable and unjoined would accumulate resources until
+ * the server exits. Here, retained slots can exhaust THREAD_SLOTS and make
+ * pthread_create() return EAGAIN. */
 static struct pthread_descriptor threads[THREAD_SLOTS];
 static pthread_t last_handle;
 static volatile int library_lock;
@@ -93,7 +97,7 @@ int pthread_create(pthread_t *handle, const pthread_attr_t *attr,
 		return EAGAIN;
 	}
 	thread->handle = new_handle();
-	thread->tid = 0;
+	thread->tid = thread->joining = 0;
 	thread->start = start_routine;
 	thread->arg = arg;
 	thread->result = 0;
@@ -108,6 +112,49 @@ int pthread_create(pthread_t *handle, const pthread_attr_t *attr,
 		return result == -ENOMEM ? EAGAIN : -result;
 	}
 	*handle = thread->handle;
+	unlock_library();
+	return 0;
+}
+
+int pthread_join(pthread_t handle, void **retval)
+{
+	struct pthread_descriptor *thread;
+	int tid, result;
+
+	if (!handle)
+		return ESRCH;
+	lock_library();
+	thread = find_thread(handle);
+	if (!thread) {
+		unlock_library();
+		return ESRCH;
+	}
+	if (thread->tid == __syscall3(SYS_gettid, 0, 0, 0)) {
+		unlock_library();
+		return EDEADLK;
+	}
+	if (thread->joining) {
+		unlock_library();
+		return EINVAL;
+	}
+	thread->joining = 1;
+	unlock_library();
+	while ((tid = thread->tid) != 0) {
+		result = futex_wait(&thread->tid, tid);
+		if (result < 0 && result != -EAGAIN && result != -EINTR) {
+			lock_library();
+			thread->joining = 0;
+			unlock_library();
+			return -result;
+		}
+	}
+	/* Reacquiring orders result reads after the kernel's clear-TID store.
+	 * The kernel no longer uses the user stack; it reaps its own task stack. */
+	lock_library();
+	if (retval)
+		*retval = thread->result;
+	thread->handle = 0;
+	thread->joining = 0;
 	unlock_library();
 	return 0;
 }
