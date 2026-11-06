@@ -67,7 +67,7 @@ LIBS	=lib/lib.a
 	$(CC) $(CFLAGS) \
 	-nostdinc -Iinclude -c -o $*.o $<
 
-all:	Boot.img lib/libc_syscalls.a
+all:	Boot.img lib/libc_syscalls.a lib/libpthread.a
 
 # <unistd.h> gets its syscall numbers from this shared header.
 init/main.o $(LIBS): include/sys/syscall.h
@@ -131,7 +131,7 @@ fs/fs.o:$(FS_SRC)
 	(cd fs; make)
 #	(cd fs & make)
 	
-lib/lib.a:$(LIB_SRC) lib/Makefile lib/sysdep.h include/sched.h
+lib/lib.a:$(LIB_SRC) lib/Makefile lib/clone.h lib/sysdep.h include/sched.h
 	make -C ./lib
 #	(cd lib & make)
 
@@ -139,6 +139,10 @@ lib/lib.a:$(LIB_SRC) lib/Makefile lib/sysdep.h include/sched.h
 .PHONY: lib/libc_syscalls.a
 lib/libc_syscalls.a:
 	$(MAKE) -C lib -f Makefile.syscall
+
+.PHONY: lib/libpthread.a
+lib/libpthread.a:
+	$(MAKE) -C lib -f Makefile.pthread
 
 boot/setup.bin: boot/setup.asm 
 	$(AS86) -I"$(INC)" -o boot/setup.bin boot/setup.asm
@@ -165,6 +169,7 @@ clean.win_sh:
 	rm init/main.o boot/head.o boot/setup.bin boot/bootsect.bin boot/setup.disasm boot/bootsect.disasm -f
 	make clean -C ./lib 
 	$(MAKE) -C lib -f Makefile.syscall clean
+	$(MAKE) -C lib -f Makefile.pthread clean
 	make clean -C ./kernel 
 	make clean -C ./mm 
 	make clean -C ./fs 
