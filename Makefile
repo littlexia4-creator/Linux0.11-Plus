@@ -131,7 +131,7 @@ fs/fs.o:$(FS_SRC)
 	(cd fs; make)
 #	(cd fs & make)
 	
-lib/lib.a:$(LIB_SRC) lib/Makefile include/sched.h
+lib/lib.a:$(LIB_SRC) lib/Makefile lib/sysdep.h include/sched.h
 	make -C ./lib
 #	(cd lib & make)
 

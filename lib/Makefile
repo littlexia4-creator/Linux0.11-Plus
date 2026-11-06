@@ -45,7 +45,7 @@ dep:
 	cp tmp_make Makefile
 
 ### Dependencies:
-syscall.o: ../include/sys/syscall.h ../include/errno.h
+syscall.o: ../include/sys/syscall.h ../include/errno.h sysdep.h
 clone.o: ../include/unistd.h ../include/sched.h ../include/stdarg.h
 gettid.o: ../include/unistd.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
