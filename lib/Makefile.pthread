@@ -1,0 +1,23 @@
+# Build the pthread user-space library with the guest i386 a.out toolchain.
+SYSCALL_TOOLCHAIN ?= ../../MinGW32-i386-linux
+CC = $(SYSCALL_TOOLCHAIN)/bin/i386-linux011-gcc.cmd
+AR = $(SYSCALL_TOOLCHAIN)/bin/i386-linux011-ar.exe
+CFLAGS = -O -nostdinc -I../include
+
+OBJS = pthread/pthread.o
+HEADERS = pthread.h ../include/signal.h ../include/sys/types.h \
+	../include/sched.h ../include/errno.h ../include/linux/futex.h \
+	../include/sys/syscall.h clone.h atomic.h sysdep.h
+
+# Link guest applications with -lpthread -lcsyscalls, in that order.
+libpthread.a: $(OBJS) Makefile.pthread
+	rm -f $@
+	"$(AR)" rcs $@ $(OBJS)
+
+pthread/%.o: %.c $(HEADERS) Makefile.pthread
+	mkdir -p pthread
+	"$(CC)" $(CFLAGS) -c -o $@ $<
+
+.PHONY: clean
+clean:
+	rm -f libpthread.a $(OBJS)
