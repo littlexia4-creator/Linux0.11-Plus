@@ -10,3 +10,5 @@
 !/pipe_test.c
 !/pthr_join.c
 !/build_pthr.sh
+!/pthr_exit.c
+!/build_pexit.sh
