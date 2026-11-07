@@ -26,5 +26,7 @@ root-files/*
 !root-files/clone_test.c
 !root-files/sigmask_test.c
 !root-files/pipe_test.c
+!root-files/pthr_join.c
+!root-files/build_pthr.sh
 *.md
 *.png
