@@ -72,6 +72,25 @@ static int start_thread(void *arg)
 	return 0;
 }
 
+void pthread_exit(void *retval)
+{
+	int i, tid = __syscall3(SYS_gettid, 0, 0, 0);
+
+	/* Without TLS, find the caller's descriptor by its live kernel TID.
+	 * The initial thread has no descriptor and can still exit on its own. */
+	lock_library();
+	for (i = 0; i < THREAD_SLOTS; i++)
+		if (threads[i].handle && threads[i].tid == tid) {
+			/* Preserve the full pointer, not an eight-bit exit status. */
+			threads[i].result = retval;
+			break;
+		}
+	unlock_library();
+	/* The kernel clears tid and wakes joiners after it stops using our stack.
+	 * Keep the descriptor and stack until joining; _exit() kills the group. */
+	__syscall3(SYS_exit, 0, 0, 0);
+}
+
 int pthread_create(pthread_t *handle, const pthread_attr_t *attr,
 		   void *(*start_routine)(void *), void *arg)
 {
