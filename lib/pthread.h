@@ -26,6 +26,8 @@ int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 		   void *(*start_routine)(void *), void *arg);
 int pthread_join(pthread_t thread, void **retval);
+/* Does not return. Retain retval for joining; other threads keep running. */
+void pthread_exit(void *retval);
 
 /* Normal process-private mutexes, initialized with PTHREAD_MUTEX_INITIALIZER.
  * The owner must unlock; recursive locking is not supported. */
