@@ -1,1 +1,1 @@
-root-files/build_thr.sh text eol=lf
+root-files/*.sh text eol=lf
