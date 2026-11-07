@@ -12,3 +12,4 @@
 !/build_pthr.sh
 !/pthr_exit.c
 !/build_pexit.sh
+!/pthr_detach.c
