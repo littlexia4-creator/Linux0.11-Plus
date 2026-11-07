@@ -1,4 +1,4 @@
-root-files/build_thr.sh text eol=lf
+root-files/*.sh text eol=lf
 run.sh text eol=lf
 run-win.sh text eol=lf
 run-docker.sh text eol=lf
