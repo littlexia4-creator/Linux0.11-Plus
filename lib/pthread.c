@@ -23,7 +23,8 @@ struct pthread_descriptor {
 };
 
 /* BSS storage avoids the non-reentrant guest heap allocator. Joinable threads
- * own their slots until joining; detached slots can be reused after tid clears.
+ * own their slots until joining or detaching; detached slots can be reused
+ * after tid clears.
  * Leaving threads joinable and unjoined would accumulate resources until
  * the server exits. Here, retained slots can exhaust THREAD_SLOTS and make
  * pthread_create() return EAGAIN. */
@@ -220,6 +221,31 @@ int pthread_join(pthread_t handle, void **retval)
 		*retval = thread->result;
 	thread->handle = 0;
 	thread->joining = 0;
+	unlock_library();
+	return 0;
+}
+
+int pthread_detach(pthread_t handle)
+{
+	struct pthread_descriptor *thread;
+
+	if (!handle)
+		return ESRCH;
+	lock_library();
+	thread = find_thread(handle);
+	if (!thread) {
+		unlock_library();
+		return ESRCH;
+	}
+	if (thread->detached || thread->joining) {
+		unlock_library();
+		return EINVAL;
+	}
+	thread->detached = 1;
+	/* A finished joinable thread can release its slot now. A running thread
+	 * retains its stack until clear-TID lets pthread_create() reclaim it. */
+	if (!thread->tid)
+		thread->handle = 0;
 	unlock_library();
 	return 0;
 }

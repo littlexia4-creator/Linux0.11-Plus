@@ -14,11 +14,11 @@ typedef struct { volatile int __lock; } pthread_mutex_t;
 
 /* Level3 subset: default stacks with joinable or detached creation.
  * NULL attributes select joinable threads. The library owns 64 stacks of
- * 16 KiB: joinable slots are retained until joining, while finished detached
- * slots are reclaimed during subsequent creation. Functions returning int
- * return error numbers directly, without using errno.
- * clone's per-task file tables/cwd remain; TLS, cancellation, cleanup handlers,
- * pthread_detach and general guest-libc thread safety are not provided. */
+ * 16 KiB: joinable slots are retained until joining or detaching. Detached
+ * slots are reusable only after the kernel clears their TIDs. Functions
+ * returning int return error numbers directly, without using errno.
+ * clone's per-task file tables/cwd remain; TLS, cancellation, cleanup handlers
+ * and general guest-libc thread safety are not provided. */
 int pthread_attr_init(pthread_attr_t *attr);
 int pthread_attr_destroy(pthread_attr_t *attr);
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
@@ -26,6 +26,7 @@ int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 		   void *(*start_routine)(void *), void *arg);
 int pthread_join(pthread_t thread, void **retval);
+int pthread_detach(pthread_t thread);
 /* Does not return. Retain retval for joining; other threads keep running. */
 void pthread_exit(void *retval);
 
