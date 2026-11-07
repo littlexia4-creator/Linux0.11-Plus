@@ -8,3 +8,5 @@
 !/clone_test.c
 !/sigmask_test.c
 !/pipe_test.c
+!/pthr_join.c
+!/build_pthr.sh
