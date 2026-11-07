@@ -1,4 +1,4 @@
-/* Level3: default joinable user threads over clone and clear-TID futexes. */
+/* Level3: user threads over clone and clear-TID futexes. */
 #include "pthread.h"
 #include <sched.h>
 #include <errno.h>
@@ -15,14 +15,15 @@ struct pthread_descriptor {
 	pthread_t handle;
 	volatile int tid;
 	int joining;
+	int detached;
 	void *(*start)(void *);
 	void *arg;
 	void *result;
 	char stack[STACK_SIZE];
 };
 
-/* BSS storage avoids the non-reentrant guest heap allocator. A finished
- * joinable thread still owns its slot until another thread joins it.
+/* BSS storage avoids the non-reentrant guest heap allocator. Joinable threads
+ * own their slots until joining; detached slots can be reused after tid clears.
  * Leaving threads joinable and unjoined would accumulate resources until
  * the server exits. Here, retained slots can exhaust THREAD_SLOTS and make
  * pthread_create() return EAGAIN. */
@@ -75,29 +76,73 @@ static int start_thread(void *arg)
 	return 0;
 }
 
+static int valid_detachstate(int detachstate)
+{
+	return detachstate == PTHREAD_CREATE_JOINABLE ||
+		detachstate == PTHREAD_CREATE_DETACHED;
+}
+
+int pthread_attr_init(pthread_attr_t *attr)
+{
+	if (!attr)
+		return EINVAL;
+	attr->__detachstate = PTHREAD_CREATE_JOINABLE;
+	return 0;
+}
+
+int pthread_attr_destroy(pthread_attr_t *attr)
+{
+	/* The supported attributes own no dynamically allocated resources. */
+	return attr ? 0 : EINVAL;
+}
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
+{
+	if (!attr || !valid_detachstate(detachstate))
+		return EINVAL;
+	attr->__detachstate = detachstate;
+	return 0;
+}
+
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
+{
+	if (!attr || !detachstate)
+		return EINVAL;
+	*detachstate = attr->__detachstate;
+	return 0;
+}
+
 int pthread_create(pthread_t *handle, const pthread_attr_t *attr,
 		   void *(*start_routine)(void *), void *arg)
 {
 	struct pthread_descriptor *thread = 0;
 	void *stack_top;
 	int i, result;
+	int detachstate = attr ? attr->__detachstate : PTHREAD_CREATE_JOINABLE;
 	int flags = CLONE_VM | CLONE_SIGHAND | CLONE_THREAD |
 		CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID;
 
-	if (!handle || attr || !start_routine)
+	if (!handle || !start_routine || !valid_detachstate(detachstate))
 		return EINVAL;
 	lock_library();
-	for (i = 0; i < THREAD_SLOTS; i++)
+	for (i = 0; i < THREAD_SLOTS; i++) {
+		/* The kernel clears tid when the thread exits.
+		 * A later pthread_create() sees that the detached thread has finished,
+		 * clears its handle, and reuses its descriptor and stack. */
+		if (threads[i].detached && !threads[i].tid)
+			threads[i].handle = 0;
 		if (!threads[i].handle) {
 			thread = &threads[i];
 			break;
 		}
+	}
 	if (!thread) {
 		unlock_library();
 		return EAGAIN;
 	}
 	thread->handle = new_handle();
 	thread->tid = thread->joining = 0;
+	thread->detached = detachstate == PTHREAD_CREATE_DETACHED;
 	thread->start = start_routine;
 	thread->arg = arg;
 	thread->result = 0;
@@ -133,7 +178,7 @@ int pthread_join(pthread_t handle, void **retval)
 		unlock_library();
 		return EDEADLK;
 	}
-	if (thread->joining) {
+	if (thread->detached || thread->joining) {
 		unlock_library();
 		return EINVAL;
 	}
