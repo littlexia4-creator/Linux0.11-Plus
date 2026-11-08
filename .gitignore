@@ -31,5 +31,7 @@ root-files/*
 !root-files/pthr_exit.c
 !root-files/build_pexit.sh
 !root-files/pthr_detach.c
+!root-files/detach_demo.c
+!root-files/build_det.sh
 *.md
 *.png
