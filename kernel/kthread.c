@@ -1,7 +1,7 @@
 /*
  *  kernel/kthread.c
  *
- *  Kernel threads for Linux 0.11: cooperative ring-0 tasks that share
+ *  Kernel threads for Linux 0.11: preemptible ring-0 tasks that share
  *  the kernel address space.  The scheduling state of every task lives
  *  in its embedded TCB (struct tcb, include/linux/sched.h) -- the code
  *  in sched.c operates on tcb.state/tcb.counter/tcb.priority.
@@ -9,8 +9,8 @@
  *  A kernel thread is a task_struct that never enters user mode.  Its
  *  TSS points eip at an assembly trampoline which calls the C kthread()
  *  wrapper. The wrapper runs fn(arg) and passes its result to kthread_exit().
- *  Threads yield voluntarily (the 0.11 timer never preempts CPL0 code) and
- *  are joined with kthread_join(), which also reclaims the task slot.
+ *  Timer return preempts workers outside atomic and legacy kernel regions.
+ *  They are joined with kthread_join(), which also reclaims the task slot.
  *
  *  Threads do not use do_exit(): that path requires a user thread group
  *  and tears down its files and user address space. kthread_exit()

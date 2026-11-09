@@ -107,6 +107,9 @@ void schedule(void)
 	int i,next,c;
 	struct task_struct ** p;
 
+	if (in_hardirq())
+		panic("schedule in interrupt context");
+
 	/* Reclaim earlier dead tasks, excluding the stack we are using. */
 	reap_dead_tasks();
 
@@ -398,8 +401,7 @@ void do_timer(long cpl)
 		do_floppy_timer();
 	if ((--current->tcb.counter)>0) return;
 	current->tcb.counter=0;
-	if (!cpl) return;
-	schedule();
+	/* The interrupt return path schedules after leaving hard-IRQ context. */
 }
 
 int sys_alarm(long seconds)

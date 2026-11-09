@@ -188,6 +188,12 @@ extern struct task_struct *current;
 extern long volatile jiffies;
 extern long startup_time;
 
+/* Test for an exhausted time slice; do_timer() clamps counter to zero. */
+static inline int need_resched(void)
+{
+	return current->tcb.counter == 0;
+}
+
 #define CURRENT_TIME (startup_time+jiffies/HZ)
 
 extern void add_timer(long jiffies, void (*fn)(void));

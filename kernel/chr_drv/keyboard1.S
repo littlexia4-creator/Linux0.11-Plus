@@ -44,7 +44,9 @@ _keyboard_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	xor %al,%al		/* %eax is scan code */
+	cld
+	call _irq_enter
+	xorl %eax,%eax		/* C entry helper may clobber all of eax */
 	inb $0x60,%al
 	cmpb $0xe0,%al
 	je set_e0
@@ -67,6 +69,9 @@ e0_e1:	inb $0x61,%al
 	outb %al,$0x20
 	pushl $0
 	call _do_tty_interrupt
+	addl $4,%esp
+	pushl 32(%esp)		/* interrupted EFLAGS */
+	call _irq_exit
 	addl $4,%esp
 	pop %es
 	pop %ds

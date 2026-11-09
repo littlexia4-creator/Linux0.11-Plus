@@ -48,6 +48,8 @@ rs_int:
 	pop %ds
 	pushl $0x10
 	pop %es
+	cld
+	call _irq_enter
 	movl 24(%esp),%edx
 	movl (%edx),%edx
 	movl rs_addr(%edx),%edx
@@ -67,6 +69,9 @@ rep_int:
 	jmp rep_int
 end:	movb $0x20,%al
 	outb %al,$0x20		/* EOI */
+	pushl 36(%esp)		/* interrupted EFLAGS; includes table_list entry */
+	call _irq_exit
+	addl $4,%esp
 	pop %ds
 	pop %es
 	popl %eax

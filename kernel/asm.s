@@ -96,7 +96,7 @@ _irq13:
 1:	jmp 1f
 1:	outb %al,$0xA0
 	popl %eax
-	jmp _coprocessor_error
+	jmp _coprocessor_interrupt
 
 _double_fault:
 	pushl $_do_double_fault
