@@ -96,12 +96,14 @@ static inline void gotoxy(unsigned int new_x,unsigned int new_y)
 
 static inline void set_origin(void)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	outb_p(12, video_port_reg);
 	outb_p(0xff&((origin-video_mem_start)>>9), video_port_val);
 	outb_p(13, video_port_reg);
 	outb_p(0xff&((origin-video_mem_start)>>1), video_port_val);
-	sti();
+	local_irq_restore(flags);
 }
 
 static void scrup(void)
@@ -312,24 +314,27 @@ void csi_m(void)
 
 static inline void set_cursor(void)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	outb_p(14, video_port_reg);
 	outb_p(0xff&((pos-video_mem_start)>>9), video_port_val);
 	outb_p(15, video_port_reg);
 	outb_p(0xff&((pos-video_mem_start)>>1), video_port_val);
-	sti();
+	local_irq_restore(flags);
 }
 
 static void respond(struct tty_struct * tty)
 {
 	char * p = RESPONSE;
+	unsigned long flags;
 
-	cli();
+	local_irq_save(flags);
 	while (*p) {
 		PUTCH(*p,tty->read_q);
 		p++;
 	}
-	sti();
+	local_irq_restore(flags);
 	copy_to_cooked(tty);
 }
 

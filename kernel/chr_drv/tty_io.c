@@ -124,20 +124,24 @@ void tty_intr(struct tty_struct * tty, int mask)
 
 static void sleep_if_empty(struct tty_queue * queue)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (!(pending_signals(current) & ~current->blocked) && EMPTY(*queue))
 		interruptible_sleep_on(&queue->proc_list);
-	sti();
+	local_irq_restore(flags);
 }
 
 static void sleep_if_full(struct tty_queue * queue)
 {
+	unsigned long flags;
+
 	if (!FULL(*queue))
 		return;
-	cli();
+	local_irq_save(flags);
 	while (!(pending_signals(current) & ~current->blocked) && LEFT(*queue)<128)
 		interruptible_sleep_on(&queue->proc_list);
-	sti();
+	local_irq_restore(flags);
 }
 
 void wait_for_keypress(void)

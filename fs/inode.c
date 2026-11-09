@@ -19,19 +19,23 @@ static void write_inode(struct m_inode * inode);
 
 static inline void wait_on_inode(struct m_inode * inode)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (inode->i_lock)
 		sleep_on(&inode->i_wait);
-	sti();
+	local_irq_restore(flags);
 }
 
 static inline void lock_inode(struct m_inode * inode)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (inode->i_lock)
 		sleep_on(&inode->i_wait);
 	inode->i_lock=1;
-	sti();
+	local_irq_restore(flags);
 }
 
 static inline void unlock_inode(struct m_inode * inode)

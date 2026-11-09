@@ -160,8 +160,9 @@ __asm__("cld ; rep ; movsl" \
 static void setup_DMA(void)
 {
 	long addr = (long) CURRENT->buffer;
+	unsigned long flags;
 
-	cli();
+	local_irq_save(flags);
 	if (addr >= 0x100000) {
 		addr = (long) tmp_floppy_area;
 		if (command == FD_WRITE)
@@ -188,7 +189,7 @@ static void setup_DMA(void)
 	immoutb_p(3,5);
 /* activate DMA 2 */
 	immoutb_p(0|2,10);
-	sti();
+	local_irq_restore(flags);
 }
 
 static void output_byte(char byte)
@@ -386,19 +387,20 @@ static void reset_interrupt(void)
 static void reset_floppy(void)
 {
 	int i;
+	unsigned long flags;
 
 	reset = 0;
 	cur_spec1 = -1;
 	cur_rate = -1;
 	recalibrate = 1;
 	printk("Reset-floppy called\n\r");
-	cli();
+	local_irq_save(flags);
 	do_floppy = reset_interrupt;
 	outb_p(current_DOR & ~0x04,FD_DOR);
 	for (i=0 ; i<100 ; i++)
 		__asm__("nop");
 	outb(current_DOR,FD_DOR);
-	sti();
+	local_irq_restore(flags);
 }
 
 static void floppy_on_interrupt(void)
