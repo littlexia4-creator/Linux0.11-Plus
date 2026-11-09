@@ -95,14 +95,21 @@ _system_call:
 	mov %dx,%es
 	movl $0x17,%edx		# fs points to local data space
 	mov %dx,%fs
+	/* Syscalls retain 0.11 serialization, including voluntary sleeps. */
+	pushl %eax
+	cld
+	call _preempt_defer
+	popl %eax
 	call _sys_call_table(,%eax,4)
 	pushl %eax
+	call _preempt_resume
 	movl _current,%eax
 	cmpl $0,state(%eax)		# state
 	jne reschedule
 	cmpl $0,counter(%eax)		# counter
 	je reschedule
 ret_from_sys_call:
+	call _preempt_defer		# signal/group-exit processing is legacy code
 	movl _current,%eax		# task[0] cannot have signals
 	cmpl _task,%eax
 	je 3f
@@ -118,7 +125,8 @@ ret_from_sys_call:
 	pushl %eax
 	call _do_signal
 	addl $8,%esp
-3:	popl %eax
+3:	call _preempt_resume
+	popl %eax
 	popl %ebx
 	popl %ecx
 	popl %edx
@@ -139,7 +147,9 @@ _coprocessor_error:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	pushl $ret_from_sys_call
+	cld
+	call _preempt_defer
+	pushl $ret_from_math
 	jmp _math_error
 
 .align 2
@@ -154,7 +164,9 @@ _device_not_available:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
-	pushl $ret_from_sys_call
+	cld
+	call _preempt_defer
+	pushl $ret_from_math
 	clts				# clear TS so that we can use math
 	movl %cr0,%eax
 	testl $0x4,%eax			# EM (math emulation bit)
@@ -167,6 +179,10 @@ _device_not_available:
 	popl %esi
 	popl %ebp
 	ret
+
+ret_from_math:
+	call _preempt_resume
+	jmp ret_from_sys_call
 
 .align 2
 _timer_interrupt:

@@ -25,12 +25,15 @@ _page_fault:
 	movl %cr2,%edx
 	pushl %edx
 	pushl %eax
-	testl $1,%eax
+	cld
+	call _preempt_defer		# page faults may block on legacy filesystem I/O
+	testl $1,(%esp)
 	jne 1f
 	call _do_no_page
 	jmp 2f
 1:	call _do_wp_page
-2:	addl $8,%esp
+2:	call _preempt_resume
+	addl $8,%esp
 	pop %fs
 	pop %es
 	pop %ds

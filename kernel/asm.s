@@ -36,7 +36,11 @@ no_error_code:
 	mov %dx,%ds
 	mov %dx,%es
 	mov %dx,%fs
-	call *%eax
+	cld
+	movl %eax,%ebx		# keep handler across the C entry helper
+	call _preempt_defer
+	call *%ebx
+	call _preempt_resume
 	addl $8,%esp
 	pop %fs
 	pop %es
@@ -114,7 +118,10 @@ error_code:
 	mov %ax,%ds
 	mov %ax,%es
 	mov %ax,%fs
+	cld
+	call _preempt_defer
 	call *%ebx
+	call _preempt_resume
 	addl $8,%esp
 	pop %fs
 	pop %es

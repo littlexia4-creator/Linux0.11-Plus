@@ -66,7 +66,7 @@ panic.s panic.o: panic.c ../include/linux/kernel.h ../include/linux/sched.h \
   ../include/linux/head.h ../include/linux/fs.h ../include/sys/types.h \
   ../include/linux/mm.h ../include/signal.h
 printk.s printk.o: printk.c ../include/stdarg.h ../include/stddef.h \
-  ../include/linux/kernel.h
+  ../include/linux/kernel.h ../include/linux/preempt.h ../include/asm/segment.h
 sched.s sched.o: sched.c ../include/linux/sched.h ../include/linux/head.h \
   ../include/linux/fs.h ../include/sys/types.h ../include/linux/mm.h \
   ../include/signal.h ../include/linux/kernel.h ../include/linux/sys.h \
