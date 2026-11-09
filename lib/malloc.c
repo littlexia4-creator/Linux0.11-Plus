@@ -186,6 +186,9 @@ void free_s(void *obj, int size)
 	struct _bucket_dir	*bdir;
 	struct bucket_desc	*bdesc, *prev;
 	unsigned long flags;
+
+	/* The search and unlink must share the same IRQ-safe critical section. */
+	local_irq_save(flags);
 	bdesc = prev = 0;
 	/* Calculate what page this object lives in */
 	page = (void *)  ((unsigned long) obj & 0xfffff000);
@@ -203,7 +206,6 @@ void free_s(void *obj, int size)
 	}
 	panic("Bad address passed to kernel free_s()");
 found:
-	local_irq_save(flags);
 	*((void **)obj) = bdesc->freeptr;
 	bdesc->freeptr = obj;
 	bdesc->refcnt--;
