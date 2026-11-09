@@ -71,6 +71,7 @@ nr_system_calls = 79
 .globl _system_call,_sys_fork,_sys_clone,_timer_interrupt,_sys_execve
 .globl _hd_interrupt,_floppy_interrupt,_parallel_interrupt
 .globl _device_not_available, _coprocessor_error
+.globl _coprocessor_interrupt
 
 .align 2
 bad_sys_call:
@@ -196,14 +197,19 @@ _timer_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
+	cld
+	call _irq_enter
 	incl _jiffies
 	movb $0x20,%al		# EOI to interrupt controller #1
 	outb %al,$0x20
 	movl CS(%esp),%eax
 	andl $3,%eax		# %eax is CPL (0 or 3, 0=supervisor)
 	pushl %eax
-	call _do_timer		# 'do_timer(long CPL)' does everything from
-	addl $4,%esp		# task switching to accounting ...
+	call _do_timer		# accounting and timer callbacks, never scheduling
+	addl $4,%esp
+	pushl EFLAGS(%esp)
+	call _irq_exit
+	addl $4,%esp
 	jmp ret_from_sys_call
 
 .align 2
@@ -253,6 +259,8 @@ _hd_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
+	cld
+	call _irq_enter
 	movb $0x20,%al
 	outb %al,$0xA0		# EOI to interrupt controller #1
 	jmp 1f			# give port chance to breathe
@@ -264,6 +272,9 @@ _hd_interrupt:
 	movl $_unexpected_hd_interrupt,%edx
 1:	outb %al,$0x20
 	call *%edx		# "interesting" way of handling intr.
+	pushl 32(%esp)		# interrupted EFLAGS, after six saved registers
+	call _irq_exit
+	addl $4,%esp
 	pop %fs
 	pop %es
 	pop %ds
@@ -282,6 +293,8 @@ _floppy_interrupt:
 	movl $0x10,%eax
 	mov %ax,%ds
 	mov %ax,%es
+	cld
+	call _irq_enter
 	movb $0x20,%al
 	outb %al,$0x20		# EOI to interrupt controller #1
 	xorl %eax,%eax
@@ -290,6 +303,9 @@ _floppy_interrupt:
 	jne 1f
 	movl $_unexpected_floppy_interrupt,%eax
 1:	call *%eax		# "interesting" way of handling intr.
+	pushl 32(%esp)
+	call _irq_exit
+	addl $4,%esp
 	pop %fs
 	pop %es
 	pop %ds
@@ -300,7 +316,43 @@ _floppy_interrupt:
 
 _parallel_interrupt:
 	pushl %eax
+	pushl %ecx
+	pushl %edx
+	push %ds
+	push %es
+	movl $0x10,%eax
+	mov %ax,%ds
+	mov %ax,%es
+	cld
+	call _irq_enter
 	movb $0x20,%al
 	outb %al,$0x20
+	pushl 28(%esp)		# interrupted EFLAGS, after five saved registers
+	call _irq_exit
+	addl $4,%esp
+	pop %es
+	pop %ds
+	popl %edx
+	popl %ecx
 	popl %eax
 	iret
+
+/* IRQ13 acknowledges the FPU interrupt in asm.s, then enters here. */
+_coprocessor_interrupt:
+	push %ds
+	push %es
+	push %fs
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%eax
+	mov %ax,%ds
+	mov %ax,%es
+	cld
+	call _irq_enter
+	call _math_error
+	pushl EFLAGS(%esp)
+	call _irq_exit
+	addl $4,%esp
+	jmp ret_from_sys_call
