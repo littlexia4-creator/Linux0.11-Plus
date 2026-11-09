@@ -60,24 +60,27 @@ static unsigned char mem_map [ PAGING_PAGES ] = {0,};
  */
 unsigned long get_free_page(void)
 {
-register unsigned long __res asm("ax");
+unsigned long result, count = PAGING_PAGES, flags;
+unsigned char *map = mem_map + PAGING_PAGES - 1;
 
-__asm__("std ; repne ; scasb\n\t"
+local_irq_save(flags);
+__asm__ volatile ("std ; repne ; scasb\n\t"
 	"jne 1f\n\t"
 	"movb $1,1(%%edi)\n\t"
 	"sall $12,%%ecx\n\t"
-	"addl %2,%%ecx\n\t"
+	"addl %4,%%ecx\n\t"
 	"movl %%ecx,%%edx\n\t"
 	"movl $1024,%%ecx\n\t"
 	"leal 4092(%%edx),%%edi\n\t"
 	"rep ; stosl\n\t"
 	"movl %%edx,%%eax\n"
-	"1:"
-	:"=a" (__res)
-	:"0" (0),"i" (LOW_MEM),"c" (PAGING_PAGES),
-	"D" (mem_map+PAGING_PAGES-1)
+	"1: cld"
+	:"=a" (result),"+c" (count),"+D" (map)
+	:"0" (0),"i" (LOW_MEM)
+	:"edx","memory","cc"
 	);
-return __res;
+local_irq_restore(flags);
+return result;
 }
 
 /*
@@ -86,13 +89,22 @@ return __res;
  */
 void free_page(unsigned long addr)
 {
+	unsigned long flags;
+	unsigned char refs;
+
 	if (addr < LOW_MEM) return;
 	if (addr >= HIGH_MEMORY)
 		panic("trying to free nonexistent page");
 	addr -= LOW_MEM;
 	addr >>= 12;
-	if (mem_map[addr]--) return;
+	local_irq_save(flags);
+	refs = mem_map[addr]--;
+	if (refs) {
+		local_irq_restore(flags);
+		return;
+	}
 	mem_map[addr]=0;
+	local_irq_restore(flags);
 	panic("trying to free free page");
 }
 

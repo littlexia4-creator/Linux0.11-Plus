@@ -106,7 +106,9 @@ void schedule(void)
 {
 	int i,next,c;
 	struct task_struct ** p;
+	unsigned long flags;
 
+	local_irq_save(flags);
 	if (in_hardirq())
 		panic("schedule in interrupt context");
 
@@ -188,6 +190,7 @@ void schedule(void)
 	switch_to(next);
 	/* We may now reclaim a task that exited and switched to us. */
 	reap_dead_tasks();
+	local_irq_restore(flags);
 }
 
 int sys_pause(void)
@@ -200,27 +203,32 @@ int sys_pause(void)
 void sleep_on(struct task_struct **p)
 {
 	struct task_struct *tmp;
+	unsigned long flags;
 
 	if (!p)
 		return;
 	if (current == &(init_task.task))
 		panic("task[0] trying to sleep");
+	local_irq_save(flags);
 	tmp = *p;
 	*p = current;
 	current->tcb.state = TASK_SLEEP_UNINTERRUPTIBLE;
 	schedule();
 	if (tmp)
 		tmp->tcb.state=0;
+	local_irq_restore(flags);
 }
 
 void interruptible_sleep_on(struct task_struct **p)
 {
 	struct task_struct *tmp;
+	unsigned long flags;
 
 	if (!p)
 		return;
 	if (current == &(init_task.task))
 		panic("task[0] trying to sleep");
+	local_irq_save(flags);
 	tmp=*p;
 	*p=current;
 repeat:	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
@@ -232,6 +240,7 @@ repeat:	current->tcb.state = TASK_SLEEP_INTERRUPTIBLE;
 	*p=NULL;
 	if (tmp)
 		tmp->tcb.state=0;
+	local_irq_restore(flags);
 }
 
 /*
@@ -257,10 +266,14 @@ int wake_up_process(struct task_struct *p)
 
 void wake_up(struct task_struct **p)
 {
+	unsigned long flags;
+
+	local_irq_save(flags);
 	if (p && *p) {
 		(**p).tcb.state=0;
 		*p=NULL;
 	}
+	local_irq_restore(flags);
 }
 
 /*
@@ -278,11 +291,12 @@ int ticks_to_floppy_on(unsigned int nr)
 	extern unsigned char selected;
 	unsigned char mask = 0x10 << nr;
 	unsigned long flags;
+	int ticks;
 
 	if (nr>3)
 		panic("floppy_on: nr>3");
+	local_irq_save(flags);
 	moff_timer[nr]=10000;		/* 100 s = very big :-) */
-	local_irq_save(flags);				/* use floppy_off to turn it off */
 	mask |= current_DOR;
 	if (!selected) {
 		mask &= 0xFC;
@@ -296,8 +310,9 @@ int ticks_to_floppy_on(unsigned int nr)
 			mon_timer[nr] = 2;
 		current_DOR = mask;
 	}
+	ticks = mon_timer[nr];
 	local_irq_restore(flags);
-	return mon_timer[nr];
+	return ticks;
 }
 
 void floppy_on(unsigned int nr)

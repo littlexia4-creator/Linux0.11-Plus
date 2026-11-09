@@ -201,6 +201,8 @@ static void scrdown(void)
 			"S" (origin+video_size_row*(bottom-1)-4)
 			);
 	}
+	/* REP above runs backwards; C code always resumes with DF clear. */
+	__asm__ volatile ("cld" : : : "cc");
 }
 
 static void lf(void)
@@ -451,7 +453,11 @@ void con_write(struct tty_struct * tty)
 {
 	int nr;
 	char c;
+	unsigned long flags;
 
+	/* Console state and queue consumers are also used by keyboard IRQs.
+	 * This callback never sleeps; serialize the whole bounded queue drain. */
+	local_irq_save(flags);
 	nr = CHARS(tty->write_q);
 	while (nr--) {
 		GETCH(tty->write_q,c);
@@ -607,6 +613,7 @@ void con_write(struct tty_struct * tty)
 		}
 	}
 	set_cursor();
+	local_irq_restore(flags);
 }
 
 /*
