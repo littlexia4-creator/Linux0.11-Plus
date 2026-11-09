@@ -2,6 +2,8 @@
  * User-space front end for this repository's Linux 0.11 kernel preemptible demo.
  * Host: run sh run.sh to rebuild the kernel and install these files.
  * Guest: sh build_pre.sh; ./preempt_demo
+ * Requires CONFIG_PREEMPT. Disabling it deliberately runs the busy loops
+ * without automatic kernel preemption, so this demo's overlap check fails.
  *
  * A user-space-only busy loop cannot demonstrate kernel preemption:
  * original Linux 0.11 already preempted user-mode execution. Syscall 79
