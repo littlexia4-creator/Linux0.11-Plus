@@ -18,7 +18,7 @@ boot/bootsect.bin
 boot/setup.bin
 *.stackdump
 root-files/*
-!root-files/kthread_demo.c
+!root-files/yield_demo.c
 !root-files/thr.c
 !root-files/build_thr.sh
 !root-files/build_clone_test.sh
