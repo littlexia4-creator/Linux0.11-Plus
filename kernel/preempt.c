@@ -3,6 +3,11 @@
 #include <linux/kernel.h>
 #include <asm/system.h>
 
+static unsigned int preempt_defer_count(void)
+{
+	return current->preempt_defer_depth;
+}
+
 void preempt_defer(void)
 {
 	current->preempt_defer_depth++;

@@ -230,7 +230,7 @@ void copy_to_cooked(struct tty_struct * tty)
 	wake_up(&tty->secondary.proc_list);
 }
 
-int tty_read(unsigned channel, char * buf, int nr)
+static int read_tty(unsigned channel, char * buf, int nr)
 {
 	struct tty_struct * tty;
 	char c, * b=buf;
@@ -291,9 +291,9 @@ int tty_read(unsigned channel, char * buf, int nr)
 	return (b-buf);
 }
 
-int tty_write(unsigned channel, char * buf, int nr)
+static int write_tty(unsigned channel, char * buf, int nr)
 {
-	static int cr_flag=0;
+	int cr_flag=0;
 	struct tty_struct * tty;
 	char c, *b=buf;
 
@@ -329,19 +329,29 @@ int tty_write(unsigned channel, char * buf, int nr)
 	return (b-buf);
 }
 
+int tty_read(unsigned channel, char *buf, int nr)
+{
+	int result;
+
+	preempt_defer();
+	result = read_tty(channel, buf, nr);
+	preempt_resume();
+	return result;
+}
+
+int tty_write(unsigned channel, char *buf, int nr)
+{
+	int result;
+
+	preempt_defer();
+	result = write_tty(channel, buf, nr);
+	preempt_resume();
+	return result;
+}
+
 /*
- * Jeh, sometimes I really like the 386.
- * This routine is called from an interrupt,
- * and there should be absolutely no problem
- * with sleeping even in an interrupt (I hope).
- * Of course, if somebody proves me wrong, I'll
- * hate intel for all time :-). We'll have to
- * be careful and see to reinstating the interrupt
- * chips before calling this, though.
- *
- * I don't think we sleep here under normal circumstances
- * anyway, which is good, as the task sleeping might be
- * totally innocent.
+ * IRQ callbacks may wake tasks and flush output, but must never sleep.
+ * The interrupt return path can schedule after the handler completes.
  */
 void do_tty_interrupt(int tty)
 {
