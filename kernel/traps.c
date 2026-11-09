@@ -200,8 +200,8 @@ void trap_init(void)
 	set_trap_gate(16,&coprocessor_error);
 	for (i=17;i<48;i++)
 		set_trap_gate(i,&reserved);
-	set_trap_gate(45,&irq13);
+	set_intr_gate(45,&irq13);
 	outb_p(inb_p(0x21)&0xfb,0x21);
 	outb(inb_p(0xA1)&0xdf,0xA1);
-	set_trap_gate(39,&parallel_interrupt);
+	set_intr_gate(39,&parallel_interrupt);
 }
