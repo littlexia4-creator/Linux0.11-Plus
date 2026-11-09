@@ -36,7 +36,7 @@ CHR_DRV_SRC  = kernel/chr_drv/tty_io.c kernel/chr_drv/console.c kernel/chr_drv/k
         kernel/chr_drv/serial.c kernel/chr_drv/rs_io.s \
 	      kernel/chr_drv/tty_ioctl.s
 
-KERNEL_SRC  = kernel/sched.c kernel/system_call.s kernel/traps.s kernel/asm.s kernel/task.c kernel/thread.c \
+KERNEL_SRC  = kernel/sched.c kernel/preempt.c kernel/system_call.s kernel/traps.s kernel/asm.s kernel/task.c kernel/thread.c \
 	kernel/kthread.c kernel/futex.c \
 	kernel/panic.c kernel/printk.c kernel/vsprintf.c kernel/sys.c kernel/exit.c \
 	kernel/signal.c kernel/mktime.c
@@ -73,7 +73,7 @@ all:	Boot.img lib/libc_syscalls.a lib/libpthread.a
 init/main.o $(LIBS): include/sys/syscall.h
 
 # Every task_struct user must see the same layout after a header change.
-$(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h
+$(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h include/linux/preempt.h
 
 KERNEL_FILE = tools/system.bin
 

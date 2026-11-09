@@ -126,7 +126,7 @@ void finish_thread(long code)
 		 * stack is reclaimed separately after switching to another task. */
 		verify_area(addr, 4);
 		put_fs_long(0, (unsigned long *)addr);
-		do_futex_wake(g, (unsigned long)addr, 1);
+		wake_up_futex(g, (unsigned long)addr, 1);
 	}
 	g->utime += current->utime;
 	g->stime += current->stime;
