@@ -277,11 +277,12 @@ int ticks_to_floppy_on(unsigned int nr)
 {
 	extern unsigned char selected;
 	unsigned char mask = 0x10 << nr;
+	unsigned long flags;
 
 	if (nr>3)
 		panic("floppy_on: nr>3");
 	moff_timer[nr]=10000;		/* 100 s = very big :-) */
-	cli();				/* use floppy_off to turn it off */
+	local_irq_save(flags);				/* use floppy_off to turn it off */
 	mask |= current_DOR;
 	if (!selected) {
 		mask &= 0xFC;
@@ -295,16 +296,18 @@ int ticks_to_floppy_on(unsigned int nr)
 			mon_timer[nr] = 2;
 		current_DOR = mask;
 	}
-	sti();
+	local_irq_restore(flags);
 	return mon_timer[nr];
 }
 
 void floppy_on(unsigned int nr)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (ticks_to_floppy_on(nr))
 		sleep_on(nr+wait_motor);
-	sti();
+	local_irq_restore(flags);
 }
 
 void floppy_off(unsigned int nr)
@@ -342,10 +345,11 @@ static struct timer_list {
 void add_timer(long jiffies, void (*fn)(void))
 {
 	struct timer_list * p;
+	unsigned long flags;
 
 	if (!fn)
 		return;
-	cli();
+	local_irq_save(flags);
 	if (jiffies <= 0)
 		(fn)();
 	else {
@@ -369,7 +373,7 @@ void add_timer(long jiffies, void (*fn)(void))
 			p = p->next;
 		}
 	}
-	sti();
+	local_irq_restore(flags);
 }
 
 void do_timer(long cpl)

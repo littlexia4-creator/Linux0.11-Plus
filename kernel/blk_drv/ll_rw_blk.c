@@ -41,11 +41,13 @@ struct blk_dev_struct blk_dev[NR_BLK_DEV] = {
 
 static inline void lock_buffer(struct buffer_head * bh)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (bh->b_lock)
 		sleep_on(&bh->b_wait);
 	bh->b_lock=1;
-	sti();
+	local_irq_restore(flags);
 }
 
 static inline void unlock_buffer(struct buffer_head * bh)
@@ -64,14 +66,15 @@ static inline void unlock_buffer(struct buffer_head * bh)
 static void add_request(struct blk_dev_struct * dev, struct request * req)
 {
 	struct request * tmp;
+	unsigned long flags;
 
 	req->next = NULL;
-	cli();
+	local_irq_save(flags);
 	if (req->bh)
 		req->bh->b_dirt = 0;
 	if (!(tmp = dev->current_request)) {
 		dev->current_request = req;
-		sti();
+		local_irq_restore(flags);
 		(dev->request_fn)();
 		return;
 	}
@@ -82,7 +85,7 @@ static void add_request(struct blk_dev_struct * dev, struct request * req)
 			break;
 	req->next=tmp->next;
 	tmp->next=req;
-	sti();
+	local_irq_restore(flags);
 }
 
 static void make_request(int major,int rw, struct buffer_head * bh)

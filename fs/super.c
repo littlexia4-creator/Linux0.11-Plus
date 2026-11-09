@@ -30,27 +30,33 @@ int ROOT_DEV = 0;
 
 static void lock_super(struct super_block * sb)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (sb->s_lock)
 		sleep_on(&(sb->s_wait));
 	sb->s_lock = 1;
-	sti();
+	local_irq_restore(flags);
 }
 
 static void free_super(struct super_block * sb)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	sb->s_lock = 0;
 	wake_up(&(sb->s_wait));
-	sti();
+	local_irq_restore(flags);
 }
 
 static void wait_on_super(struct super_block * sb)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (sb->s_lock)
 		sleep_on(&(sb->s_wait));
-	sti();
+	local_irq_restore(flags);
 }
 
 struct super_block * get_super(int dev)
