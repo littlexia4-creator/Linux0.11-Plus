@@ -79,10 +79,21 @@ static struct task_struct *do_create_kthread(long (*fn)(void *), void *arg,
 	return p;
 }
 
+static struct task_struct *create_kthread(long (*fn)(void *), void *arg,
+					  const char *name)
+{
+	struct task_struct *p;
+
+	preempt_defer();
+	p = do_create_kthread(fn, arg, name);
+	preempt_resume();
+	return p;
+}
+
 struct task_struct *kthread_run(long (*fn)(void *), void *arg,
 			       const char *name)
 {
-	struct task_struct *p = do_create_kthread(fn, arg, name);
+	struct task_struct *p = create_kthread(fn, arg, name);
 
 	if (p)
 		wake_up_process(p);
@@ -91,6 +102,7 @@ struct task_struct *kthread_run(long (*fn)(void *), void *arg,
 
 void kthread_exit(long code)
 {
+	preempt_defer();
 	reparent_children(current);
 	current->exit_code = code;
 	current->tcb.state = TASK_ZOMBIE;
@@ -103,6 +115,7 @@ int kthread_join(struct task_struct *t)
 {
 	int i, code;
 
+	preempt_defer();
 	while (t->tcb.state != TASK_ZOMBIE)
 		sleep_on(&t->kthread.wait_head);
 	code = t->exit_code;
@@ -121,5 +134,6 @@ int kthread_join(struct task_struct *t)
 			break;
 		}
 	free_page((unsigned long) t);
+	preempt_resume();
 	return code;
 }

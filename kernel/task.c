@@ -39,6 +39,7 @@ struct task_struct *alloc_task(int nr, const struct task_struct *template)
 	if (!p)
 		return NULL;
 	*p = *template;
+	p->preempt_defer_depth = 0;
 	p->tcb.state = TASK_SLEEP_UNINTERRUPTIBLE;
 	p->tid = last_tid;
 	p->tgid = p->tid;	/* fork and kernel threads start a new process */
