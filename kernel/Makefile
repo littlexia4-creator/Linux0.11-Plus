@@ -24,7 +24,8 @@ CPP	=gcc -E -nostdinc -I../include
 	$(CC) $(CFLAGS) \
 	-c -o $*.o $<
 
-OBJS  = sched.o preempt.o system_call.o traps.o asm.o task.o thread.o kthread.o strncpy_test.o preempt_demo.o futex.o sem.o semaphore.o \
+OBJS  = sched.o preempt.o system_call.o traps.o asm.o task.o thread.o kthread.o \
+	cond_resched_demo.o strncpy_test.o preempt_demo.o futex.o sem.o semaphore.o \
 	panic.o printk.o vsprintf.o sys.o exit.o \
 	signal.o mktime.o
 
@@ -49,10 +50,11 @@ dep:
 
 ### Dependencies:
 sys.o: ../include/linux/reboot.h ../include/asm/io.h ../include/asm/system.h
-preempt.o sched.o: ../include/linux/config.h
+preempt.o sched.o cond_resched_demo.o: ../include/linux/config.h
 preempt.o: ../include/linux/sched.h ../include/linux/preempt.h ../include/linux/kernel.h ../include/asm/system.h
 preempt_demo.o: ../include/linux/sched.h ../include/linux/preempt.h ../include/errno.h
 thread.o: ../include/linux/sched.h ../include/linux/tty.h
+cond_resched_demo.o: ../include/linux/sched.h ../include/linux/kernel.h ../include/errno.h
 strncpy_test.o: ../include/string.h ../include/linux/kernel.h ../include/errno.h
 futex.o: ../include/linux/sched.h ../include/linux/futex.h ../include/errno.h ../include/asm/segment.h
 kthread.o : ../include/linux/sched.h

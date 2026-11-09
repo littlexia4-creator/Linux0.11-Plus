@@ -1,5 +1,6 @@
 /*
 !/.gitignore
+!/cond_resched_demo.c
 !/thr.c
 !/futex_wait.h
 !/build_thr.sh
