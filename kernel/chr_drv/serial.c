@@ -52,8 +52,10 @@ void rs_init(void)
  */
 void rs_write(struct tty_struct * tty)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	if (!EMPTY(tty->write_q))
 		outb(inb_p(tty->write_q.data+1)|0x02,tty->write_q.data+1);
-	sti();
+	local_irq_restore(flags);
 }

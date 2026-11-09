@@ -38,10 +38,12 @@ int NR_BUFFERS = 0;
 
 static inline void wait_on_buffer(struct buffer_head * bh)
 {
-	cli();
+	unsigned long flags;
+
+	local_irq_save(flags);
 	while (bh->b_lock)
 		sleep_on(&bh->b_wait);
-	sti();
+	local_irq_restore(flags);
 }
 
 int sys_sync(void)
