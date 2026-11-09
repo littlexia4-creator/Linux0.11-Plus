@@ -146,12 +146,15 @@ void ll_rw_block(int rw, struct buffer_head * bh)
 {
 	unsigned int major;
 
+	preempt_defer();
 	if ((major=MAJOR(bh->b_dev)) >= NR_BLK_DEV ||
 	!(blk_dev[major].request_fn)) {
 		printk("Trying to read nonexistent block-device\n\r");
+		preempt_resume();
 		return;
 	}
 	make_request(major,rw,bh);
+	preempt_resume();
 }
 
 void blk_dev_init(void)
