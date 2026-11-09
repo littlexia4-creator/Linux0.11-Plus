@@ -19,6 +19,7 @@ boot/setup.bin
 *.stackdump
 root-files/*
 !root-files/yield_demo.c
+!root-files/cond_resched_demo.c
 !root-files/thr.c
 !root-files/build_thr.sh
 !root-files/build_clone_test.sh
