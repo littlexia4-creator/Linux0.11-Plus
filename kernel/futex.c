@@ -22,14 +22,18 @@ static int do_futex_wake(struct thread_group *g, unsigned long addr, int count)
 
 int wake_up_futex(struct thread_group *g, unsigned long addr, int count)
 {
-	return do_futex_wake(g, addr, count);
+	int result;
+
+	preempt_defer();
+	result = do_futex_wake(g, addr, count);
+	preempt_resume();
+	return result;
 }
 
 static int do_futex_wait(struct thread_group *g, unsigned long addr, int expected)
 {
-	/* On this uniprocessor, kernel context is not preemptible. There is
-	 * no sleeping operation between comparison and waiter registration,
-	 * so a wake cannot be lost between those two steps. */
+	/* The caller holds legacy kernel protection through comparison,
+	 * registration and the transition to sleep, preventing lost wakeups. */
 	if (get_fs_long((unsigned long *)addr) != (unsigned long)expected)
 		return -EAGAIN;
 	current->futex_uaddr = addr;
@@ -45,6 +49,16 @@ static int do_futex_wait(struct thread_group *g, unsigned long addr, int expecte
 	return 0;
 }
 
+static int wait_on_futex(struct thread_group *g, unsigned long addr, int expected)
+{
+	int result;
+
+	preempt_defer();
+	result = do_futex_wait(g, addr, expected);
+	preempt_resume();
+	return result;
+}
+
 int sys_futex(unsigned long addr, int op, int value)
 {
 	struct thread_group *g = current->group;
@@ -55,8 +69,8 @@ int sys_futex(unsigned long addr, int op, int value)
 		return -EINVAL;
 	op &= ~FUTEX_PRIVATE_FLAG;
 	if (op == FUTEX_WAKE)
-		return value < 0 ? -EINVAL : do_futex_wake(g, addr, value);
+		return value < 0 ? -EINVAL : wake_up_futex(g, addr, value);
 	if (op != FUTEX_WAIT)
 		return -ENOSYS;
-	return do_futex_wait(g, addr, value);
+	return wait_on_futex(g, addr, value);
 }

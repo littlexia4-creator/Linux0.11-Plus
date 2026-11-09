@@ -10,6 +10,7 @@
 #include <linux/head.h>
 #include <linux/fs.h>
 #include <linux/mm.h>
+#include <linux/preempt.h>
 #include <signal.h>
 
 #if (NR_OPEN > 32)
@@ -146,6 +147,7 @@ struct task_struct {
 	struct thread_group *group; /* NULL for idle and kernel threads */
 	unsigned long futex_uaddr; /* zero unless waiting on a user futex */
 	int *clear_child_tid; /* user word cleared and woken at thread exit */
+	unsigned int preempt_defer_depth; /* legacy services may schedule voluntarily */
 };
 
 /*
@@ -177,6 +179,7 @@ struct task_struct {
 /* group */ NULL, \
 /* futex */ 0, \
 /* clear_child_tid */ NULL, \
+/* preempt_defer_depth */ 0, \
 }
 
 extern struct task_struct *task[NR_TASKS];
