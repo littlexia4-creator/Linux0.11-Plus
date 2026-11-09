@@ -13,15 +13,17 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 	"movw %%ax,%%gs" \
 	:::"ax")
 
-#define sti() __asm__ ("sti"::)
-#define cli() __asm__ ("cli"::)
-
 /*
+ * sti() intentionally enables maskable interrupts on this CPU (IF = 1),
+ * e.g. after boot initialization; cli() disables them (IF = 0).
+ *
  * For temporary critical sections, pair local_irq_save(flags) with
  * local_irq_restore(flags) to preserve the caller's interrupt state.
  * Interrupts disabled on entry remain disabled on return, allowing nesting.
  * Ending such a section with sti() could enable interrupts too early.
  */
+#define sti() __asm__ volatile ("sti" : : : "memory")
+#define cli() __asm__ volatile ("cli" : : : "memory")
 #define local_irq_save(flags) \
 	__asm__ volatile ("pushfl; popl %0; cli" : "=r" (flags) : : "memory")
 #define local_irq_restore(flags) \
