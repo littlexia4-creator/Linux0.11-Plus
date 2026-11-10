@@ -81,7 +81,8 @@
 #define __NR_futex	76	/* minimal process-local wait/wake */
 #define __NR_strncpy_test	77	/* run the in-kernel strncpy regression test */
 #define __NR_sigprocmask	78	/* atomically update the calling thread's mask */
-/* 79 and 80 are unassigned. */
+#define __NR_preempt_demo	79	/* demonstrate kernel-worker preemption */
+/* 80 is unassigned. */
 #define __NR_reboot	81	/* privileged Bochs power-off */
 #define __NR_sched_yield	82	/* voluntarily yield the calling thread's CPU */
 #define __NR_semop	83
@@ -166,6 +167,7 @@
 #define SYS_futex	__NR_futex
 #define SYS_strncpy_test	__NR_strncpy_test
 #define SYS_sigprocmask	__NR_sigprocmask
+#define SYS_preempt_demo	__NR_preempt_demo
 #define SYS_reboot	__NR_reboot
 #define SYS_sched_yield	__NR_sched_yield
 #define SYS_semop	__NR_semop
