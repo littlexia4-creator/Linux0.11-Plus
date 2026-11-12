@@ -48,6 +48,7 @@ dep:
 	(cd blk_drv; make dep)
 
 ### Dependencies:
+sys.o: ../include/linux/reboot.h ../include/asm/io.h ../include/asm/system.h
 preempt.o sched.o: ../include/linux/config.h
 preempt.o: ../include/linux/sched.h ../include/linux/preempt.h ../include/linux/kernel.h ../include/asm/system.h
 thread.o: ../include/linux/sched.h ../include/linux/tty.h

@@ -9,9 +9,34 @@
 #include <linux/sched.h>
 #include <linux/tty.h>
 #include <linux/kernel.h>
+#include <linux/reboot.h>
+#include <asm/io.h>
+#include <asm/system.h>
 #include <asm/segment.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
+
+int sys_reboot(unsigned int magic1, unsigned int magic2, unsigned int cmd)
+{
+	static const char request[] = "Shutdown";
+	unsigned long flags;
+	int i;
+
+	if (!suser())
+		return -EPERM;
+	if (magic1 != LINUX_REBOOT_MAGIC1 || magic2 != LINUX_REBOOT_MAGIC2 ||
+	    cmd != LINUX_REBOOT_CMD_POWER_OFF)
+		return -EINVAL;
+
+	sync_buffers();
+	local_irq_save(flags);
+	/* Bochs recognizes these eight byte writes to its shutdown port. */
+	for (i=0; i<sizeof(request)-1; i++)
+		outb(request[i],0x8900);
+	local_irq_restore(flags);
+	/* An emulator without this port can continue running the console. */
+	return -EIO;
+}
 
 int sys_ftime()
 {

@@ -1,0 +1,8 @@
+#ifndef _LINUX_REBOOT_H
+#define _LINUX_REBOOT_H
+
+#define LINUX_REBOOT_MAGIC1	0xfee1dead
+#define LINUX_REBOOT_MAGIC2	672274793
+#define LINUX_REBOOT_CMD_POWER_OFF	0x4321fedc
+
+#endif
