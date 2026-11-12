@@ -1,7 +1,10 @@
 bochsout.txt
+bochs-console.log
+bochs.log
 hdc-0.11.img.lock
 .vscode/
 tools/__pycache__/
+docker/.build/
 Boot.img
 hdc-0.11.img
 *.o
