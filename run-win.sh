@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build the kernel and guest libraries, then boot Linux 0.11 in Bochs.
 # Run from Git Bash / MSYS only: the Makefiles need a POSIX shell
-# ('cd xxx ; make', rm, sync) -- the cmd.exe make in run.bat cannot
+# ('cd xxx ; make', rm, sync) -- the cmd.exe make in run-win.bat cannot
 # run them and can leave a corrupt mixed build.
 
 cd "$(dirname "$0")" || exit 1

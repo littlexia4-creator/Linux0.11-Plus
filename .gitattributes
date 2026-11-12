@@ -1,2 +1,4 @@
 root-files/*.sh text eol=lf
+run-win.sh text eol=lf
 run-docker.sh text eol=lf
+run-win.bat text eol=crlf
