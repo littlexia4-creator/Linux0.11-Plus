@@ -72,6 +72,7 @@ all:	Boot.img lib/libc_syscalls.a lib/libpthread.a
 
 # <unistd.h> gets its syscall numbers from this shared header.
 init/main.o $(LIBS): include/sys/syscall.h
+init/main.o: include/linux/reboot.h
 
 # Every task_struct user must see the same layout after a header change.
 $(ARCHIVES) $(DRIVERS) $(MATH): include/linux/sched.h include/linux/preempt.h

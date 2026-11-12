@@ -24,10 +24,12 @@ inline _syscall0(int,fork)
 inline _syscall0(int,pause)
 inline _syscall1(int,setup,void *,BIOS)
 inline _syscall0(int,sync)
+inline _syscall3(int,reboot,unsigned int,magic1,unsigned int,magic2,unsigned int,cmd)
 
 #include <linux/tty.h>
 #include <linux/sched.h>
 #include <linux/head.h>
+#include <linux/reboot.h>
 #include <asm/system.h>
 #include <asm/io.h>
 
@@ -208,6 +210,15 @@ void init(void)
 			if (pid == wait(&i))
 				break;
 		printf("\n\rchild %d died with code %04x\n\r",pid,i);
+		/* Only the main console shell is waited for here, not its commands
+		 * or subshells. Keep respawning after a signal, but power off after
+		 * a normal shell exit (including Ctrl+D and exit with a status). */
+		if (!(i & 0x7f)) {
+			printf("Closing Bochs...\n\r");
+			reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+			       LINUX_REBOOT_CMD_POWER_OFF);
+			printf("Power-off failed; restarting the console shell.\n\r");
+		}
 		sync();
 	}
 	_exit(0);	/* NOTE! _exit, not exit() */
