@@ -194,6 +194,7 @@ extern void free_block(int dev, int block);
 extern struct m_inode * new_inode(int dev);
 extern void free_inode(struct m_inode * inode);
 extern int sync_dev(int dev);
+extern void sync_buffers(void);
 extern struct super_block * get_super(int dev);
 extern int ROOT_DEV;
 

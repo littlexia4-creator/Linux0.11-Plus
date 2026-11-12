@@ -81,6 +81,8 @@
 #define __NR_futex	76	/* minimal process-local wait/wake */
 /* 77 is reserved for the strncpy regression-test syscall. */
 #define __NR_sigprocmask	78	/* atomically update the calling thread's mask */
+/* 79 and 80 are unassigned. */
+#define __NR_reboot	81	/* privileged Bochs power-off */
 
 #define SYS_setup	__NR_setup
 #define SYS_exit	__NR_exit
@@ -159,6 +161,7 @@
 #define SYS_exit_group	__NR_exit_group
 #define SYS_futex	__NR_futex
 #define SYS_sigprocmask	__NR_sigprocmask
+#define SYS_reboot	__NR_reboot
 
 /* Also declare it here for the guest's original installed <unistd.h>. */
 long syscall(long number, ...);
