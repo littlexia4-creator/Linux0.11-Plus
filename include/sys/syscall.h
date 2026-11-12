@@ -83,6 +83,7 @@
 #define __NR_sigprocmask	78	/* atomically update the calling thread's mask */
 #define __NR_preempt_demo	79	/* demonstrate kernel-worker preemption */
 #define __NR_cond_resched_demo	80	/* demonstrate voluntary conditional scheduling */
+#define __NR_reboot	81	/* privileged Bochs power-off */
 
 #define SYS_setup	__NR_setup
 #define SYS_exit	__NR_exit
@@ -165,6 +166,7 @@
 #define SYS_sigprocmask	__NR_sigprocmask
 #define SYS_preempt_demo	__NR_preempt_demo
 #define SYS_cond_resched_demo	__NR_cond_resched_demo
+#define SYS_reboot	__NR_reboot
 
 /* Also declare it here for the guest's original installed <unistd.h>. */
 long syscall(long number, ...);

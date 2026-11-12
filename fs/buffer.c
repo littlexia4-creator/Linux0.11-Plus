@@ -61,6 +61,17 @@ int sys_sync(void)
 	return 0;
 }
 
+void sync_buffers(void)
+{
+	int i;
+	struct buffer_head * bh;
+
+	sys_sync();
+	/* sys_sync queues writes; power-off must wait for their completion. */
+	for (i=0, bh=start_buffer; i<NR_BUFFERS; i++,bh++)
+		wait_on_buffer(bh);
+}
+
 int sync_dev(int dev)
 {
 	int i;
