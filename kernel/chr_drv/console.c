@@ -108,6 +108,9 @@ static inline void set_origin(void)
 
 static void scrup(void)
 {
+	unsigned long count, dest, source;
+
+	/* REP changes its count and pointers; tell GCC before it reuses them. */
 	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM)
 	{
 		if (!top && bottom == video_num_lines) {
@@ -115,90 +118,102 @@ static void scrup(void)
 			pos += video_size_row;
 			scr_end += video_size_row;
 			if (scr_end > video_mem_end) {
-				__asm__("cld\n\t"
+				__asm__ volatile ("cld\n\t"
 					"rep\n\t"
 					"movsl\n\t"
-					"movl _video_num_columns,%1\n\t"
+					"movl _video_num_columns,%%ecx\n\t"
 					"rep\n\t"
 					"stosw"
-					::"a" (video_erase_char),
-					"c" ((video_num_lines-1)*video_num_columns>>1),
-					"D" (video_mem_start),
-					"S" (origin)
+					:"=c" (count), "=D" (dest), "=S" (source)
+					:"a" (video_erase_char),
+					"0" ((video_num_lines-1)*video_num_columns>>1),
+					"1" (video_mem_start), "2" (origin)
+					:"memory"
 					);
 				scr_end -= origin-video_mem_start;
 				pos -= origin-video_mem_start;
 				origin = video_mem_start;
 			} else {
-				__asm__("cld\n\t"
+				__asm__ volatile ("cld\n\t"
 					"rep\n\t"
 					"stosw"
-					::"a" (video_erase_char),
-					"c" (video_num_columns),
-					"D" (scr_end-video_size_row)
+					:"=c" (count), "=D" (dest)
+					:"a" (video_erase_char), "0" (video_num_columns),
+					"1" (scr_end-video_size_row)
+					:"memory"
 					);
 			}
 			set_origin();
 		} else {
-			__asm__("cld\n\t"
+			__asm__ volatile ("cld\n\t"
 				"rep\n\t"
 				"movsl\n\t"
 				"movl _video_num_columns,%%ecx\n\t"
 				"rep\n\t"
 				"stosw"
-				::"a" (video_erase_char),
-				"c" ((bottom-top-1)*video_num_columns>>1),
-				"D" (origin+video_size_row*top),
-				"S" (origin+video_size_row*(top+1))
+				:"=c" (count), "=D" (dest), "=S" (source)
+				:"a" (video_erase_char),
+				"0" ((bottom-top-1)*video_num_columns>>1),
+				"1" (origin+video_size_row*top),
+				"2" (origin+video_size_row*(top+1))
+				:"memory"
 				);
 		}
 	}
 	else		/* Not EGA/VGA */
 	{
-		__asm__("cld\n\t"
+		__asm__ volatile ("cld\n\t"
 			"rep\n\t"
 			"movsl\n\t"
 			"movl _video_num_columns,%%ecx\n\t"
 			"rep\n\t"
 			"stosw"
-			::"a" (video_erase_char),
-			"c" ((bottom-top-1)*video_num_columns>>1),
-			"D" (origin+video_size_row*top),
-			"S" (origin+video_size_row*(top+1))
+			:"=c" (count), "=D" (dest), "=S" (source)
+			:"a" (video_erase_char),
+			"0" ((bottom-top-1)*video_num_columns>>1),
+			"1" (origin+video_size_row*top),
+			"2" (origin+video_size_row*(top+1))
+			:"memory"
 			);
 	}
 }
 
 static void scrdown(void)
 {
+	unsigned long count, dest, source;
+
 	if (video_type == VIDEO_TYPE_EGAC || video_type == VIDEO_TYPE_EGAM)
 	{
-		__asm__("std\n\t"
+		__asm__ volatile ("std\n\t"
 			"rep\n\t"
 			"movsl\n\t"
 			"addl $2,%%edi\n\t"	/* %edi has been decremented by 4 */
 			"movl _video_num_columns,%%ecx\n\t"
 			"rep\n\t"
 			"stosw"
-			::"a" (video_erase_char),
-			"c" ((bottom-top-1)*video_num_columns>>1),
-			"D" (origin+video_size_row*bottom-4),
-			"S" (origin+video_size_row*(bottom-1)-4)
+			:"=c" (count), "=D" (dest), "=S" (source)
+			:"a" (video_erase_char),
+			"0" ((bottom-top-1)*video_num_columns>>1),
+			"1" (origin+video_size_row*bottom-4),
+			"2" (origin+video_size_row*(bottom-1)-4)
+			:"memory", "cc"
 			);
 	}
 	else		/* Not EGA/VGA */
 	{
-		__asm__("std\n\t"
+		__asm__ volatile ("std\n\t"
 			"rep\n\t"
 			"movsl\n\t"
 			"addl $2,%%edi\n\t"	/* %edi has been decremented by 4 */
 			"movl _video_num_columns,%%ecx\n\t"
 			"rep\n\t"
 			"stosw"
-			::"a" (video_erase_char),
-			"c" ((bottom-top-1)*video_num_columns>>1),
-			"D" (origin+video_size_row*bottom-4),
-			"S" (origin+video_size_row*(bottom-1)-4)
+			:"=c" (count), "=D" (dest), "=S" (source)
+			:"a" (video_erase_char),
+			"0" ((bottom-top-1)*video_num_columns>>1),
+			"1" (origin+video_size_row*bottom-4),
+			"2" (origin+video_size_row*(bottom-1)-4)
+			:"memory", "cc"
 			);
 	}
 	/* REP above runs backwards; C code always resumes with DF clear. */
