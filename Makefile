@@ -16,7 +16,7 @@ LD	=ld
 #LDFLAGS	= -m elf_i386 -Ttext 0 -e startup_32
 LDFLAGS	  = -m i386pe   -Ttext 0 -e startup_32 -s -M --image-base 0x0000 
 CC	=gcc -march=i386 $(RAMDISK)
-CFLAGS	=-Wall -O2 -fomit-frame-pointer -fno-builtin
+CFLAGS	=-std=gnu99 -Wall -O2 -fomit-frame-pointer -fno-builtin
 
 
 
