@@ -27,6 +27,8 @@ cp include/sys/syscall.h root-files/include/sys/syscall.h || exit 1
 cp include/signal.h root-files/include/signal.h || exit 1
 cp lib/bits/sigthread.h root-files/lib/bits/sigthread.h || exit 1
 cp lib/pthread.h root-files/include/pthread.h || exit 1
+cp lib/semaphore.h root-files/include/semaphore.h || exit 1
+cp include/errno.h root-files/include/errno.h || exit 1
 
 # overlay: stage root-files/* into the guest disk image
 ./overlay.sh || exit 1
