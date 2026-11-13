@@ -13,6 +13,9 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 	"movw %%ax,%%gs" \
 	:::"ax")
 
+/* Compiler memory barrier; emits no CPU instruction. */
+#define barrier() __asm__ volatile ("" : : : "memory")
+
 /*
  * sti() intentionally enables maskable interrupts on this CPU (IF = 1),
  * e.g. after boot initialization; cli() disables them (IF = 0).
