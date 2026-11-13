@@ -16,5 +16,7 @@
 !/pthr_detach.c
 !/detach_demo.c
 !/build_det.sh
+!/sem_demo.c
+!/build_sem.sh
 !/preempt_demo.c
 !/build_pre.sh
