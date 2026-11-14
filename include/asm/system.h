@@ -1,3 +1,6 @@
+#ifndef _ASM_SYSTEM_H
+#define _ASM_SYSTEM_H
+
 #define move_to_user_mode() \
 __asm__ ("movl %%esp,%%eax\n\t" \
 	"pushl $0x17\n\t" \
@@ -31,6 +34,12 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 	__asm__ volatile ("pushfl; popl %0; cli" : "=r" (flags) : : "memory")
 #define local_irq_restore(flags) \
 	__asm__ volatile ("pushl %0; popfl" : : "r" (flags) : "memory", "cc")
+
+/* Test IF (bit 9) in a saved EFLAGS value. */
+static inline int irqs_enabled_flags(unsigned long flags)
+{
+	return (flags & 0x200) != 0;
+}
 
 #define nop() __asm__ ("nop"::)
 
@@ -95,4 +104,6 @@ __asm__ ("movw $104,%1\n\t" \
 
 #define set_tss_desc(n,addr) _set_tssldt_desc(((char *) (n)),((int)(addr)),"0x89")
 #define set_ldt_desc(n,addr) _set_tssldt_desc(((char *) (n)),((int)(addr)),"0x82")
+
+#endif
 
