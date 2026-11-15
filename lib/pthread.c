@@ -3,10 +3,10 @@
 #include <unistd.h>
 #include <sched.h>
 #include <errno.h>
-#include <linux/futex.h>
 #include <sys/syscall.h>
 #include "clone.h"
 #include "atomic.h"
+#include "futex.h"
 #include "sysdep.h"
 
 #define THREAD_SLOTS 64
@@ -31,11 +31,6 @@ static struct pthread_descriptor threads[THREAD_SLOTS];
 static pthread_t last_handle;
 static volatile int library_lock;
 
-static int futex_wait(volatile int *word, int expected)
-{
-	return __syscall3(SYS_futex, (long)word, FUTEX_WAIT, expected);
-}
-
 static void lock_library(void)
 {
 	while (atomic_exchange_acquire(&library_lock, 1))
@@ -45,7 +40,7 @@ static void lock_library(void)
 static void unlock_library(void)
 {
 	atomic_exchange_release(&library_lock, 0);
-	__syscall3(SYS_futex, (long)&library_lock, FUTEX_WAKE, 1);
+	futex_wake(&library_lock, 1);
 }
 
 static struct pthread_descriptor *find_thread(pthread_t handle)
