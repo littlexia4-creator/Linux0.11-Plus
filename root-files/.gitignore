@@ -1,5 +1,7 @@
 /*
 !/.gitignore
+!/yield_demo.c
+!/build_yield.sh
 !/cond_resched_demo.c
 !/thr.c
 !/futex_wait.h
