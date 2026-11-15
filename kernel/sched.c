@@ -207,6 +207,12 @@ void yield(void)
 	schedule();
 }
 
+int sys_sched_yield(void)
+{
+	yield();
+	return 0;
+}
+
 /*
  * Voluntary scheduling point. Unlike yield(), do not discard a live
  * counter: schedule only after the time slice expires. Callers must be in process
