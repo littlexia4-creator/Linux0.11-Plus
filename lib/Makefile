@@ -25,7 +25,7 @@ CPP	=gcc -E -nostdinc -I../include
 	-c -o $*.o $<
 
 OBJS  = ctype.o _exit.o open.o close.o errno.o write.o dup.o setsid.o \
-	execve.o wait.o string.o malloc.o clone.o gettid.o syscall.o
+	execve.o wait.o string.o malloc.o clone.o gettid.o syscall.o sched_yield.o
 
 lib.a: $(OBJS) Makefile
 	rm -f $@
@@ -48,6 +48,7 @@ dep:
 syscall.o: ../include/sys/syscall.h ../include/errno.h sysdep.h
 clone.o: ../include/unistd.h ../include/sched.h ../include/stdarg.h clone.h
 gettid.o: ../include/unistd.h
+sched_yield.o: ../include/unistd.h ../include/sched.h
 _exit.s _exit.o : _exit.c ../include/unistd.h ../include/sys/stat.h \
   ../include/sys/types.h ../include/sys/times.h ../include/sys/utsname.h \
   ../include/utime.h 

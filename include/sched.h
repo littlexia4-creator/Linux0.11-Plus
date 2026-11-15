@@ -1,6 +1,9 @@
 #ifndef _USER_SCHED_H
 #define _USER_SCHED_H
 
+/* Yield the CPU while remaining runnable; another task need not run. */
+int sched_yield(void);
+
 #define CLONE_VM       0x00000100 /* share the address space */
 #define CLONE_SIGHAND  0x00000800 /* share signal dispositions, not masks */
 #define CLONE_THREAD   0x00010000 /* join the caller's thread group */
