@@ -22,5 +22,7 @@
 !/bld_usrsem.sh
 !/preempt_demo.c
 !/build_pre.sh
+!/sysv_sem.c
+!/bld_syssem.sh
 !/ksem_demo.c
 !/bld_ksem.sh
