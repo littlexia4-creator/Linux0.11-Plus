@@ -24,6 +24,8 @@ cp include/unistd.h root-files/include/unistd.h || exit 1
 cp include/sched.h root-files/include/sched.h || exit 1
 cp include/linux/futex.h root-files/include/linux/futex.h || exit 1
 cp include/sys/syscall.h root-files/include/sys/syscall.h || exit 1
+cp include/sys/ipc.h root-files/include/sys/ipc.h || exit 1
+cp include/sys/sem.h root-files/include/sys/sem.h || exit 1
 cp include/signal.h root-files/include/signal.h || exit 1
 cp lib/bits/sigthread.h root-files/lib/bits/sigthread.h || exit 1
 cp lib/pthread.h root-files/include/pthread.h || exit 1
