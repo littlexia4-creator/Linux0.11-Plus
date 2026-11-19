@@ -38,7 +38,7 @@ CHR_DRV_SRC  = kernel/chr_drv/tty_io.c kernel/chr_drv/console.c kernel/chr_drv/k
 
 KERNEL_SRC  = kernel/sched.c kernel/preempt.c kernel/system_call.s kernel/traps.s kernel/asm.s kernel/task.c kernel/thread.c \
 	kernel/kthread.c kernel/cond_resched_demo.c \
-	kernel/strncpy_test.c kernel/preempt_demo.c kernel/futex.c kernel/sem.c kernel/semaphore.c \
+	kernel/strncpy_test.c kernel/preempt_demo.c kernel/futex.c kernel/sem.c kernel/semaphore.c kernel/semaphore_demo.c \
 	kernel/panic.c kernel/printk.c kernel/vsprintf.c kernel/sys.c kernel/exit.c \
 	kernel/signal.c kernel/mktime.c
 

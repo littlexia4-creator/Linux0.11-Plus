@@ -88,6 +88,7 @@
 #define __NR_semop	83
 #define __NR_semget	84
 #define __NR_semctl	85
+#define __NR_kernel_sem_demo	86	/* demonstrate kernel counting semaphores */
 
 #define SYS_setup	__NR_setup
 #define SYS_exit	__NR_exit
@@ -174,6 +175,7 @@
 #define SYS_semop	__NR_semop
 #define SYS_semget	__NR_semget
 #define SYS_semctl	__NR_semctl
+#define SYS_kernel_sem_demo	__NR_kernel_sem_demo
 
 /* Also declare it here for the guest's original installed <unistd.h>. */
 long syscall(long number, ...);

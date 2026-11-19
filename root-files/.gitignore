@@ -22,3 +22,5 @@
 !/build_sem.sh
 !/preempt_demo.c
 !/build_pre.sh
+!/ksem_demo.c
+!/build_ksem.sh
