@@ -20,6 +20,8 @@ extern void sema_init(struct semaphore *sem, int value);
 /* Blocking acquisition requires task context with interrupts enabled. */
 extern void down(struct semaphore *sem);
 extern int down_interruptible(struct semaphore *sem);
+/* Wait at most timeout timer ticks; return -ETIME if no permit arrives. */
+extern int down_timeout(struct semaphore *sem, long timeout);
 /* Linux convention: return 0 on acquisition, 1 if unavailable. */
 extern int down_trylock(struct semaphore *sem);
 /* Any task or interrupt handler may release a permit. */
