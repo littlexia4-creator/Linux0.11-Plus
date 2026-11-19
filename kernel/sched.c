@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/sys.h>
 #include <linux/fdreg.h>
+#include <linux/semaphore.h>
 #include <asm/system.h>
 #include <asm/io.h>
 #include <asm/segment.h>
@@ -440,6 +441,7 @@ void do_timer(long cpl)
 {
 	extern int beepcount;
 	extern void sysbeepstop(void);
+	semaphore_timer_tick();
 
 	if (beepcount)
 		if (!--beepcount)

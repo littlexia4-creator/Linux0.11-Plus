@@ -24,7 +24,7 @@ CPP	=gcc -E -nostdinc -I../include
 	$(CC) $(CFLAGS) \
 	-c -o $*.o $<
 
-OBJS  = sched.o preempt.o system_call.o traps.o asm.o task.o thread.o kthread.o futex.o \
+OBJS  = sched.o preempt.o system_call.o traps.o asm.o task.o thread.o kthread.o futex.o semaphore.o \
 	panic.o printk.o vsprintf.o sys.o exit.o \
 	signal.o mktime.o
 
@@ -87,3 +87,6 @@ traps.s traps.o: traps.c ../include/string.h ../include/linux/head.h \
   ../include/linux/mm.h ../include/signal.h ../include/linux/kernel.h \
   ../include/asm/system.h ../include/asm/segment.h ../include/asm/io.h
 vsprintf.s vsprintf.o: vsprintf.c ../include/stdarg.h ../include/string.h
+
+semaphore.o: semaphore.c ../include/linux/semaphore.h ../include/linux/sched.h \
+  ../include/linux/kernel.h ../include/linux/preempt.h ../include/asm/system.h ../include/errno.h
