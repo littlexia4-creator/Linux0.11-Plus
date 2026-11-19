@@ -102,7 +102,7 @@ void semaphore_timer_tick(void)
 }
 
 static int wait_for_permit(struct semaphore *sem, int interruptible,
-			   unsigned long flags)
+			   int timed, long timeout, unsigned long flags)
 {
 	struct semaphore_waiter current_waiter;
 	struct thread_group *g;
@@ -111,16 +111,27 @@ static int wait_for_permit(struct semaphore *sem, int interruptible,
 	if (in_hardirq() || !irqs_enabled_flags(flags) || current == task[0])
 		panic("semaphore wait in non-sleepable context");
 	init_waiter(&current_waiter, sem);
+	if (timed && timeout <= 0) {
+		return -ETIME;
+	}
 	add_waiter(sem, &current_waiter);
+	if (timed)
+		add_timed_waiter(&current_waiter, timeout);
 	for (;;) {
 		/* up() removes and grants under the same IRQ protection. A grant
 		 * wins over a simultaneous signal, so a permit cannot be lost. */
 		if (current_waiter.granted)
 			break;
+		if (current_waiter.timed_out) {
+			result = -ETIME;
+			break;
+		}
 		g = current->group;
 		if (interruptible && ((pending_signals(current) & ~current->blocked) ||
 		    (g && (g->exiting || (g->exec_task && g->exec_task != current))))) {
 			remove_waiter(sem, &current_waiter);
+			if (timed)
+				remove_timed_waiter(&current_waiter);
 			result = -EINTR;
 			break;
 		}
@@ -137,7 +148,8 @@ static int wait_for_permit(struct semaphore *sem, int interruptible,
 	return result;
 }
 
-static int acquire_permit(struct semaphore *sem, int interruptible)
+static int acquire_permit(struct semaphore *sem, int interruptible,
+			  int timed, long timeout)
 {
 	unsigned long flags;
 	int ret;
@@ -148,19 +160,25 @@ static int acquire_permit(struct semaphore *sem, int interruptible)
 		local_irq_restore(flags);
 		return 0;
 	}
-	ret = wait_for_permit(sem, interruptible, flags);
+
+	ret = wait_for_permit(sem, interruptible, timed, timeout, flags);
 	local_irq_restore(flags);
 	return ret;
 }
 
 void down(struct semaphore *sem)
 {
-	acquire_permit(sem, 0);
+	acquire_permit(sem, 0, 0, 0);
 }
 
 int down_interruptible(struct semaphore *sem)
 {
-	return acquire_permit(sem, 1);
+	return acquire_permit(sem, 1, 0, 0);
+}
+
+int down_timeout(struct semaphore *sem, long timeout)
+{
+	return acquire_permit(sem, 0, 1, timeout);
 }
 
 int down_trylock(struct semaphore *sem)
