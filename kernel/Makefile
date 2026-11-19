@@ -25,7 +25,7 @@ CPP	=gcc -E -nostdinc -I../include
 	-c -o $*.o $<
 
 OBJS  = sched.o preempt.o system_call.o traps.o asm.o task.o thread.o kthread.o \
-	cond_resched_demo.o strncpy_test.o preempt_demo.o futex.o sem.o semaphore.o \
+	cond_resched_demo.o strncpy_test.o preempt_demo.o futex.o sem.o semaphore.o semaphore_demo.o \
 	panic.o printk.o vsprintf.o sys.o exit.o \
 	signal.o mktime.o
 
@@ -97,3 +97,4 @@ sem.o: sem.c ../include/linux/sem.h ../include/sys/sem.h ../include/sys/ipc.h \
   ../include/asm/segment.h ../include/errno.h
 semaphore.o: semaphore.c ../include/linux/semaphore.h ../include/linux/sched.h \
   ../include/linux/kernel.h ../include/linux/preempt.h ../include/asm/system.h ../include/errno.h
+semaphore_demo.o: semaphore_demo.c ../include/linux/semaphore.h ../include/linux/sched.h ../include/linux/kernel.h ../include/errno.h
