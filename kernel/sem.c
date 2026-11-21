@@ -41,6 +41,24 @@ static struct sem_array *find_set(int id)
 	return NULL;
 }
 
+static int permitted(struct sem_array *set, int requested)
+{
+	struct ipc_perm *p = &set->ds.sem_perm;
+	int mode = p->mode;
+
+	if (current->euid == p->uid || current->euid == p->cuid)
+		mode >>= 6;
+	else if (current->egid == p->gid || current->egid == p->cgid)
+		mode >>= 3;
+	return (mode & requested) == requested || !current->euid;
+}
+
+static int owns_set(struct sem_array *set)
+{
+	return !current->euid || current->euid == set->ds.sem_perm.uid ||
+		current->euid == set->ds.sem_perm.cuid;
+}
+
 static void link_waiter(struct sem_array *set, struct sem_queue_node *waiter)
 {
 	waiter->next = NULL;
@@ -157,9 +175,8 @@ int sys_semop(int id, struct sembuf *user_ops, unsigned int nops)
 	struct sem_queue_node q;
 	struct thread_group *g;
 	unsigned int i;
-	/* Until per-set permissions are added, only root may use IPC sets. */
-	if (current->euid)
-		return -EPERM;
+	int requested = 4;
+
 	if (id < 0 || !nops)
 		return -EINVAL;
 	if (nops > SEMOPM)
@@ -175,6 +192,8 @@ int sys_semop(int id, struct sembuf *user_ops, unsigned int nops)
 			return -EINVAL;
 		if (ops[i].sem_flg & SEM_UNDO)
 			return -ENOSYS; /* Never silently omit exit-time undo accounting. */
+		if (ops[i].sem_op)
+			requested = 2; /* Linux checks alter permission for mixed arrays. */
 	}
 	set = find_set(id);
 	if (!set)
@@ -182,6 +201,8 @@ int sys_semop(int id, struct sembuf *user_ops, unsigned int nops)
 	for (i=0; i<nops; i++)
 		if (ops[i].sem_num >= set->ds.sem_nsems)
 			return -EFBIG;
+	if (!permitted(set, requested))
+		return -EACCES;
 	init_sem_request(&q, ops, nops);
 	q.result = try_semop(set, &q);
 	if (q.result == 0) {
@@ -208,10 +229,8 @@ int sys_semget(key_t key, int nsems, int flags)
 {
 	struct sem_array *set = NULL;
 	struct ipc_perm *p;
-	int i;
+	int i, requested = ((flags >> 6) | (flags >> 3) | flags) & 7;
 
-	if (current->euid)
-		return -EPERM;
 	if (nsems < 0 || nsems > SEMMSL)
 		return -EINVAL;
 	for (i=0; i<SEMMNI; i++) {
@@ -223,7 +242,7 @@ int sys_semget(key_t key, int nsems, int flags)
 				return -EEXIST;
 			if (nsems > sets[i].ds.sem_nsems)
 				return -EINVAL;
-			return sets[i].id;
+			return permitted(&sets[i], requested) ? sets[i].id : -EACCES;
 		}
 	}
 	if (key != IPC_PRIVATE && !(flags & IPC_CREAT))
@@ -239,8 +258,8 @@ int sys_semget(key_t key, int nsems, int flags)
 	set->ds.sem_ctime = CURRENT_TIME;
 	p = &set->ds.sem_perm;
 	p->__key = key;
-	p->uid = p->cuid = 0;
-	p->gid = p->cgid = 0;
+	p->uid = p->cuid = current->euid;
+	p->gid = p->cgid = current->egid;
 	p->mode = flags & 0777;
 	p->__seq++;
 	set->waiters.first = set->waiters.last = NULL;
@@ -278,8 +297,6 @@ int sys_semctl(int id, int number, struct semctl_args *control)
 	int command, i, count = 0;
 	unsigned int nsems;
 
-	if (current->euid)
-		return -EPERM;
 	if (!set)
 		return -EINVAL;
 	if (!user_range((unsigned long)control, sizeof(*control)))
@@ -293,6 +310,8 @@ int sys_semctl(int id, int number, struct semctl_args *control)
 		return -EIDRM;
 	nsems = set->ds.sem_nsems;
 	if (command == IPC_RMID || command == IPC_SET) {
+		if (!owns_set(set))
+			return -EPERM;
 		if (command == IPC_RMID) {
 			set->id = 0;
 			for (q=set->waiters.first; q; q=next) {
@@ -309,6 +328,8 @@ int sys_semctl(int id, int number, struct semctl_args *control)
 		set = find_set(id);
 		if (!set)
 			return -EIDRM;
+		if (!owns_set(set))
+			return -EPERM;
 		set->ds.sem_perm.uid = ds.sem_perm.uid;
 		set->ds.sem_perm.gid = ds.sem_perm.gid;
 		set->ds.sem_perm.mode = ds.sem_perm.mode & 0777;
@@ -319,6 +340,8 @@ int sys_semctl(int id, int number, struct semctl_args *control)
 	    command != GETVAL && command != SETVAL && command != GETPID &&
 	    command != GETNCNT && command != GETZCNT)
 		return -EINVAL;
+	if (!permitted(set, command == SETVAL || command == SETALL ? 2 : 4))
+		return -EACCES;
 	if (command == IPC_STAT) {
 		if (!user_range(arg, sizeof(ds)))
 			return -EFAULT;
@@ -347,6 +370,8 @@ int sys_semctl(int id, int number, struct semctl_args *control)
 		set = find_set(id);
 		if (!set)
 			return -EIDRM;
+		if (!permitted(set, 2))
+			return -EACCES;
 		for (i=0; i<nsems; i++) {
 			set->values[i] = values[i];
 			set->pids[i] = current->tgid;
