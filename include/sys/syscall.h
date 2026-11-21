@@ -84,6 +84,9 @@
 /* 79 and 80 are unassigned. */
 #define __NR_reboot	81	/* privileged Bochs power-off */
 #define __NR_sched_yield	82	/* voluntarily yield the calling thread's CPU */
+#define __NR_semop	83
+#define __NR_semget	84
+#define __NR_semctl	85
 
 #define SYS_setup	__NR_setup
 #define SYS_exit	__NR_exit
@@ -164,6 +167,9 @@
 #define SYS_sigprocmask	__NR_sigprocmask
 #define SYS_reboot	__NR_reboot
 #define SYS_sched_yield	__NR_sched_yield
+#define SYS_semop	__NR_semop
+#define SYS_semget	__NR_semget
+#define SYS_semctl	__NR_semctl
 
 /* Also declare it here for the guest's original installed <unistd.h>. */
 long syscall(long number, ...);

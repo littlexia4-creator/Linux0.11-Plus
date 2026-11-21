@@ -56,6 +56,7 @@ extern int errno;
 #define ENOLCK		37
 #define ENOSYS		38
 #define ENOTEMPTY	39
+#define EIDRM		43
 #define ETIME		62
 #define EOVERFLOW	75
 
