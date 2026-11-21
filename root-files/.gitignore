@@ -5,6 +5,8 @@
 !/cond_resched_demo.c
 !/thr.c
 !/futex_wait.h
+!/futex_qtest.c
+!/build_fq.sh
 !/build_thr.sh
 !/build_clone_test.sh
 !/strncpy_test.c
