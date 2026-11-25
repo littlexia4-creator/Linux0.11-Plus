@@ -7,6 +7,8 @@
 !/futex_wait.h
 !/futex_qtest.c
 !/build_fq.sh
+!/pgdir_test.c
+!/build_pgdir.sh
 !/build_thr.sh
 !/build_clone_test.sh
 !/strncpy_test.c
