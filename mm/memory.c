@@ -34,8 +34,9 @@ static inline volatile void oom(void)
 	do_group_exit(SIGSEGV);
 }
 
+/* Flush the active address space, without switching back to the boot directory. */
 #define invalidate() \
-__asm__("movl %%eax,%%cr3"::"a" (0))
+__asm__ volatile ("movl %%cr3,%%eax; movl %%eax,%%cr3" ::: "eax", "memory")
 
 /* these are not to be changed without changing head.s etc */
 #define LOW_MEM 0x100000
@@ -43,6 +44,8 @@ __asm__("movl %%eax,%%cr3"::"a" (0))
 #define PAGING_PAGES (PAGING_MEMORY>>12)
 #define MAP_NR(addr) (((addr)-LOW_MEM)>>12)
 #define USED 100
+#define KERNEL_PDE_COUNT 4
+#define KERNEL_LINEAR_END (KERNEL_PDE_COUNT * 0x400000UL)
 
 #define CODE_SPACE(addr) ((((addr)+4095)&~4095) < \
 current->start_code + current->end_code)
@@ -109,20 +112,36 @@ void free_page(unsigned long addr)
 }
 
 /*
- * This function frees a continuos block of page tables, as needed
- * by 'exit()'. As does copy_page_tables(), this handles only 4Mb blocks.
+ * Free a range of user page tables in the specified physical directory.
+ * Like copy_page_tables(), this handles only 4 MiB-aligned blocks. The
+ * shared kernel identity-map entries must never be freed here.
  */
-int free_page_tables(unsigned long from,unsigned long size)
+/* Every address space shares the boot-time identity map for kernel memory. */
+unsigned long new_page_directory(void)
+{
+	unsigned long directory, *entries;
+	int i;
+
+	directory = get_free_page();
+	if (!directory)
+		return 0;
+	entries = (unsigned long *)directory;
+	for (i=0; i<KERNEL_PDE_COUNT; i++)
+		entries[i] = pg_dir[i];
+	return directory;
+}
+
+int free_page_tables(unsigned long directory,unsigned long from,unsigned long size)
 {
 	unsigned long *pg_table;
 	unsigned long * dir, nr;
 
 	if (from & 0x3fffff)
 		panic("free_page_tables called with wrong alignment");
-	if (!from)
-		panic("Trying to free up swapper memory space");
+	if (from < KERNEL_LINEAR_END)
+		panic("Trying to free shared kernel page tables");
 	size = (size + 0x3fffff) >> 22;
-	dir = (unsigned long *) ((from>>20) & 0xffc); /* _pg_dir = 0 */
+	dir = (unsigned long *) (directory + ((from>>20) & 0xffc));
 	for ( ; size-->0 ; dir++) {
 		if (!(1 & *dir))
 			continue;
@@ -142,7 +161,7 @@ int free_page_tables(unsigned long from,unsigned long size)
 
 /*
  *  Well, here is one of the most complicated functions in mm. It
- * copies a range of linerar addresses by copying only the pages.
+ * copies a range of linear addresses between physical page directories.
  * Let's hope this is bug-free, 'cause this one I don't want to debug :-)
  *
  * Note! We don't copy just any chunks of memory - addresses have to
@@ -157,7 +176,8 @@ int free_page_tables(unsigned long from,unsigned long size)
  * 1 Mb-range, so the pages can be shared with the kernel. Thus the
  * special case for nr=xxxx.
  */
-int copy_page_tables(unsigned long from,unsigned long to,long size)
+int copy_page_tables(unsigned long source_directory, unsigned long from,
+		     unsigned long target_directory, unsigned long to, long size)
 {
 	unsigned long * from_page_table;
 	unsigned long * to_page_table;
@@ -167,8 +187,10 @@ int copy_page_tables(unsigned long from,unsigned long to,long size)
 
 	if ((from&0x3fffff) || (to&0x3fffff))
 		panic("copy_page_tables called with wrong alignment");
-	from_dir = (unsigned long *) ((from>>20) & 0xffc); /* _pg_dir = 0 */
-	to_dir = (unsigned long *) ((to>>20) & 0xffc);
+	if (to < KERNEL_LINEAR_END)
+		panic("copy_page_tables overlaps kernel mappings");
+	from_dir = (unsigned long *) (source_directory + ((from>>20) & 0xffc));
+	to_dir = (unsigned long *) (target_directory + ((to>>20) & 0xffc));
 	size = ((unsigned) (size+0x3fffff)) >> 22;
 	for( ; size-->0 ; from_dir++,to_dir++) {
 		if (1 & *to_dir)
@@ -208,13 +230,11 @@ unsigned long put_page(unsigned long page,unsigned long address)
 {
 	unsigned long tmp, *page_table;
 
-/* NOTE !!! This uses the fact that _pg_dir=0 */
-
 	if (page < LOW_MEM || page >= HIGH_MEMORY)
 		printk("Trying to put page %p at %p\n",page,address);
 	if (mem_map[(page-LOW_MEM)>>12] != 1)
 		printk("mem_map disagrees with %p at %p\n",page,address);
-	page_table = (unsigned long *) ((address>>20) & 0xffc);
+	page_table = (unsigned long *) (current->tss.cr3 + ((address>>20) & 0xffc));
 	if ((*page_table)&1)
 		page_table = (unsigned long *) (0xfffff000 & *page_table);
 	else {
@@ -264,7 +284,7 @@ void do_wp_page(unsigned long error_code,unsigned long address)
 #endif
 	un_wp_page((unsigned long *)
 		(((address>>10) & 0xffc) + (0xfffff000 &
-		*((unsigned long *) ((address>>20) &0xffc)))));
+		*((unsigned long *) (current->tss.cr3 + ((address>>20) &0xffc))))));
 
 }
 
@@ -272,7 +292,7 @@ void write_verify(unsigned long address)
 {
 	unsigned long page;
 
-	if (!( (page = *((unsigned long *) ((address>>20) & 0xffc)) )&1))
+	if (!( (page = *((unsigned long *) (current->tss.cr3 + ((address>>20) & 0xffc))) )&1))
 		return;
 	page &= 0xfffff000;
 	page += ((address>>10) & 0xffc);
@@ -307,9 +327,8 @@ static int try_to_share(unsigned long address, struct task_struct * p)
 	unsigned long to_page;
 	unsigned long phys_addr;
 
-	from_page = to_page = ((address>>20) & 0xffc);
-	from_page += ((p->start_code>>20) & 0xffc);
-	to_page += ((current->start_code>>20) & 0xffc);
+	from_page = p->tss.cr3 + (((address + p->start_code)>>20) & 0xffc);
+	to_page = current->tss.cr3 + (((address + current->start_code)>>20) & 0xffc);
 /* is there a page-directory at from? */
 	from = *(unsigned long *) from_page;
 	if (!(from & 1))
@@ -430,8 +449,8 @@ void calc_mem(void)
 		if (!mem_map[i]) free++;
 	printk("%d pages free (of %d)\n\r",free,PAGING_PAGES);
 	for(i=2 ; i<1024 ; i++) {
-		if (1&pg_dir[i]) {
-			pg_tbl=(long *) (0xfffff000 & pg_dir[i]);
+		if (1&((unsigned long *)current->tss.cr3)[i]) {
+			pg_tbl=(long *) (0xfffff000 & ((unsigned long *)current->tss.cr3)[i]);
 			for(j=k=0 ; j<1024 ; j++)
 				if (pg_tbl[j]&1)
 					k++;

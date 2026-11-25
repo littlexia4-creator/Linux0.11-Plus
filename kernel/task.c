@@ -107,9 +107,10 @@ int copy_mem(int nr,struct task_struct * p)
 	p->start_code = new_code_base;
 	set_base(p->ldt[1],new_code_base);
 	set_base(p->ldt[2],new_data_base);
-	if (copy_page_tables(old_data_base,new_data_base,data_limit)) {
+	if (copy_page_tables(current->tss.cr3, old_data_base,
+			     p->tss.cr3, new_data_base, data_limit)) {
 		printk("free_page_tables: from copy_mem\n");
-		free_page_tables(new_data_base,data_limit);
+		free_page_tables(p->tss.cr3, new_data_base,data_limit);
 		return -ENOMEM;
 	}
 	return 0;
@@ -150,13 +151,22 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->tss.gs = gs & 0xffff;
 	if (last_task_used_math == current)
 		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
+	/* The child owns a directory; clone() instead shares its group's CR3. */
+	p->tss.cr3 = new_page_directory();
+	if (!p->tss.cr3) {
+		task[nr] = NULL;
+		free_page((long)p);
+		return -ENOMEM;
+	}
 	if (copy_mem(nr,p)) {
+		free_page(p->tss.cr3);
 		task[nr] = NULL;
 		free_page((long) p);
 		return -EAGAIN;
 	}
 	if (new_thread_group(p)) {
-		free_page_tables(p->start_code, get_limit(0x17));
+		free_page_tables(p->tss.cr3, p->start_code, get_limit(0x17));
+		free_page(p->tss.cr3);
 		task[nr] = NULL;
 		free_page((long) p);
 		return -ENOMEM;

@@ -28,8 +28,11 @@
 #define NULL ((void *) 0)
 #endif
 
-extern int copy_page_tables(unsigned long from, unsigned long to, long size);
-extern int free_page_tables(unsigned long from, unsigned long size);
+extern int copy_page_tables(unsigned long from_dir, unsigned long from,
+			    unsigned long to_dir, unsigned long to, long size);
+extern int free_page_tables(unsigned long directory, unsigned long from,
+			    unsigned long size);
+extern unsigned long new_page_directory(void);
 
 extern void sched_init(void);
 extern void schedule(void);
@@ -107,6 +110,7 @@ struct thread_group {
 	int refs, live;
 	long tgid;
 	unsigned long base;
+	unsigned long page_directory; /* physical CR3; shared by group members */
 	struct task_struct *leader, *exec_task;
 	struct sigaction action[32];
 	unsigned long pending;

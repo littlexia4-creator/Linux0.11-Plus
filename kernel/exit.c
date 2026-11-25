@@ -29,8 +29,13 @@ void release(struct task_struct * p)
 			(gdt+(i<<1)+FIRST_TSS_ENTRY)->b = 0;
 			(gdt+(i<<1)+FIRST_LDT_ENTRY)->a = 0;
 			(gdt+(i<<1)+FIRST_LDT_ENTRY)->b = 0;
-			if (p->group && !--p->group->refs)
+			if (p->group && !--p->group->refs) {
+				/* No task can be running on this directory now. */
+				if (p->group->page_directory == current->tss.cr3)
+					panic("release of active page directory");
+				free_page(p->group->page_directory);
 				free_page((long)p->group);
+			}
 			free_page((long)p);
 			return;
 		}

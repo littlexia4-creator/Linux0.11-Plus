@@ -17,6 +17,7 @@ int new_thread_group(struct task_struct *p)
 	g->refs = g->live = 1;
 	g->tgid = p->tgid;
 	g->base = p->start_code;
+	g->page_directory = p->tss.cr3;
 	g->leader = p;
 	for (i=0; i<32; i++)
 		g->action[i] = task_actions(current)[i];
@@ -33,6 +34,8 @@ int join_thread_group(struct task_struct *p)
 	g->refs++;
 	g->live++;
 	p->group = g;
+	/* Threads share one address space and therefore one CR3. */
+	p->tss.cr3 = g->page_directory;
 	p->tgid = g->tgid;
 	p->real_parent = current->real_parent;
 	return 0;
@@ -139,7 +142,7 @@ void finish_thread(long code)
 	if (!g->live) {
 		if (g->tgid == 1)
 			panic("init exited");
-		free_page_tables(g->base, 0x4000000);
+		free_page_tables(g->page_directory, g->base, 0x4000000);
 		g->alarm = 0;
 		if (g->leader->leader) {
 			if (g->leader->tty >= 0)
